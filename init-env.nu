@@ -16,14 +16,17 @@ export-env {
     try {
         if $env._FORTNOX_USE_CACHE? {
             $env._FORTNOX_CACHE_DIR = ($env._FORTNOX_DATA_DIR | path join "cache")
-            $env._FORTNOX_CACHE_VALID_DURATION = ('30min' | into duration)
+            $env._FORTNOX_CACHE_VALID_DURATION = (
+                $env._FORTNOX_CACHE_VALID_DURATION? 
+                | default ('5min' | into duration)
+            )
 
             if not ( $env._FORTNOX_CACHE_DIR | path exists) {
                 mkdir $env._FORTNOX_CACHE_DIR
             } else {
                 # Cleanup existing cache
                 (ls $env._FORTNOX_CACHE_DIR 
-                    | where {$in.modified - $env._FORTNOX_CACHE_VALID_DURATION >= (date now)} 
+                    | where { $in.modified - $env._FORTNOX_CACHE_VALID_DURATION >= (date now) } 
                     | each { rm $in.name } 
                 )
             }
