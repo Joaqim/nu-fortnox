@@ -54,19 +54,14 @@ export def --env main [
     }
     
     if ($from_date | is-empty) and ($to_date | is-empty) {
-        $date_range = (get_daterange_from_params {
-            ...(if not ($full_date | is-empty) {
-                    ($full_date | into datetime | date to-record | select year month day)
-                } else {
-                    {
-                        year: $for_year
-                        month: $for_month
-                        day: $for_day
-                    }
-                }
+        if not ($full_date | is-empty) {
+            $date_range = (get_daterange_from_params --for-year $for_year --for-month $for_month --for-day $for_day --for-quarter $for_quarter)
+        } else {
+            $date_range = (
+                from: ($full_date | into datetime)
+                to: ($full_date | into datetime)
             )
-            quarter: $for_quarter
-        })
+        }
     } else {
         # Debug:
         print ($date_range.from | format date "%Y-%m-%dT%H:%M:%S.%9f")
