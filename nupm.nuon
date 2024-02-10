@@ -2,7 +2,7 @@
 
 	name: nu-fortnox,
 	type: module,
-	version: "0.1.0",
+	version: "0.1.1",
 	script: build.nu
 	dependencies: {
 		nushell: 0.90.1
