@@ -35,6 +35,6 @@ export def "fortnox version" []: nothing -> record<version: string, branch: stri
         version: $"($v)+($n)"
         branch: $"(^git -C $nu_fortnox_path branch --show-current)"
         commit: $"(^git -C $nu_fortnox_path rev-parse HEAD)"
-        last_commit: last_commit_date
+        last_commit: $last_commit_date
     }
 }
