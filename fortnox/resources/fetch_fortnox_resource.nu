@@ -11,10 +11,6 @@ def --env _request [
     ] -> record {
     ratelimit_sleep
 
-    {
-        "MetaInformation": {TotalPages: 2, CurrentPage: (url | parse --regex "\\S+page=(\\d+).*" | into int) }
-        "Invoices": [{"@Url": $url, "CustomerName": "Confidential", "CustomerEmail": "confidential@mail.com", "EmailInformation": {"EmailTo": "confidential@mail.com"}, "Country": Sverige, "City": Gothenburg, "DeliveryCity": Gothenburg, "DeliveryCountry": Sverige }]
-    }
 
     mut $headers = (get_auth_headers --access-token $access_token)
 
@@ -112,11 +108,12 @@ export def --env main [
             }
         }
     }
+
     ratelimit_sleep
     mut $result = []
     let $cache_key = $"($resources)_(url_encode_params {...$params, page: ( $page | first ), add: $additional_path, id: $id})"
 
-    if $env._FORTNOX_USE_CACHE and (not $no_cache) {
+    if $env._FORTNOX_USE_CACHE and not $no_cache {
         let $cached_result = (cache load_from_file $cache_key)
         if $cached_result != null {
             $result = $cached_result
@@ -129,7 +126,7 @@ export def --env main [
 
             let $resource: any = (_request GET $url)
 
-            if not MetaInformation in $resource {
+            if (($resource.MetaInformation? | describe) != 'record') {
                 $result = [$resource]
                 break
             }
@@ -141,7 +138,7 @@ export def --env main [
             }
         }
 
-        if $env._FORTNOX_USE_CACHE {
+        if $env._FORTNOX_USE_CACHE and not $no_cache {
             cache save_to_file $cache_key $result
         }
     }

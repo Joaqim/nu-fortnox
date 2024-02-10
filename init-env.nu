@@ -13,22 +13,26 @@ export-env {
         $env._FORTNOX_DATA_DIR = $env._FORTNOX_CONF_DIR
     }
 
-    if not _FORTNOX_USE_CACHE in $env {
+    try {
+        if $env._FORTNOX_USE_CACHE? {
+            $env._FORTNOX_CACHE_DIR = ($env._FORTNOX_DATA_DIR | path join "cache")
+            $env._FORTNOX_CACHE_VALID_DURATION = ('30min' | into duration)
+
+            if not ( $env._FORTNOX_CACHE_DIR | path exists) {
+                mkdir $env._FORTNOX_CACHE_DIR
+            } else {
+                # Cleanup existing cache
+                (ls $env._FORTNOX_CACHE_DIR 
+                    | where {$in.modified - $env._FORTNOX_CACHE_VALID_DURATION >= (date now)} 
+                    | each { rm $in.name } 
+                )
+            }
+        } else {
+            $env._FORTNOX_USE_CACHE = false
+        }
+    } catch {
+        # TODO: Log error
         $env._FORTNOX_USE_CACHE = false
-    }
-
-    if $env._FORTNOX_USE_CACHE {
-        $env._FORTNOX_CACHE_DIR = ($env._FORTNOX_DATA_DIR | path join "cache")
-        $env._FORTNOX_CACHE_VALID_DURATION = ('30min' | into duration)
-
-        mkdir $env._FORTNOX_CACHE_DIR
-
-        # Cleanup existing cache
-        (ls $env._FORTNOX_CACHE_DIR | where {$in.modified - $env._FORTNOX_CACHE_VALID_DURATION >= (date now)} | each { rm $in.name } )
-    }
-
-    if not _FORTNOX_DB_CLIENT in $env {
-        $env._FORTNOX_DB_CLIENT = "mongodb"
     }
 
     $env.QUEUE_LIST = []
