@@ -20,7 +20,7 @@ export def main [
     )
      
     if not ($params.quarter | is-empty) {
-        if not $params.quarter in 1..4 {
+        if not ($params.quarter in 1..4) {
             error make {
                 text: "Invalid date range"
                 label: {
@@ -75,7 +75,7 @@ export def main [
 
 
     if not ($params.day | is-empty) {
-        if not $params.day in 1..31 {
+        if not ($params.day in 1..31) {
             error make {
                 msg: "Invalid date range"
                 label: {
@@ -91,7 +91,7 @@ export def main [
     }
 
     if not ($params.month | is-empty) {
-        if not $params.month in 1..12 {
+        if not ($params.month in 1..12) {
             error make {
                 msg: "Invalid date range"
                 label: {
@@ -109,7 +109,7 @@ export def main [
 
 
     if not ($params.year | is-empty) {
-        if not $params.year in 1970.. {
+        if not ($params.year in 1970..) {
             error make {
                 text: "Invalid date range"
                 label: {

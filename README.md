@@ -1,9 +1,9 @@
 # nu-fortnox
 
-WIP, currently focused on supporting Fortnox resource: 'invoices' primarily
+WIP, currently primarily focused on supporting Fortnox API for resource: 'invoices'
 
 ```nushell
-fortnox invoices --limit 100 --for-quarter 1 --for-year 2024 --page 1.. 
+fortnox invoices --for-quarter 1 --for-year 2024 --page 1.. 
     | to csv 
     | save Invoices_2024-Q1.csv
 ```
@@ -30,6 +30,13 @@ use .
 overlay use nu-fortnox
 fortnox invoices -h # To show all available flags
 ```
+or
+```nushell
+use . *
+fortnox invoices -h # To show all available flags
+```
+
+
 
 ### Configuration
 
