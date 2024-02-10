@@ -5,7 +5,7 @@ export-env {
 
 export use ./fortnox/
 
-export def main [] {
+export def main [--help (-h)] {
     print "Usage (fortnox invoices -h):\n"
     (fortnox invoices -h)
 }
@@ -28,13 +28,13 @@ export def "fortnox version" []: nothing -> record<version: string, branch: stri
     }
 
     let v = (open $nupm_nuon).version
-    let n =  ^git -C $nu_fortnox_path describe | parse "{v}-{n}-{r}" | into record | get n? | default 0
+    let n =  ^git -C $nu_fortnox_path describe --tags --abbrev=0 | parse "{v}-{n}-{r}" | into record | get n? | default 0
     let last_commit_date = ^git log --pretty=format:%aD -n 1 | into datetime
 
     return {
         version: $"($v)+($n)"
         branch: $"(^git -C $nu_fortnox_path branch --show-current)"
         commit: $"(^git -C $nu_fortnox_path rev-parse HEAD)"
-        last_commit: last_commit_date
+        last_commit: $last_commit_date
     }
 }
