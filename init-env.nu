@@ -35,7 +35,7 @@ export-env {
         $env._FORTNOX_USE_CACHE = false
     }
 
-    $env.QUEUE_LIST = []
+    $env._RATELIMIT_QUEUE_LIST = []
 
     $env._FORTNOX_API_HOST = "api.fortnox.se"
     $env._FORTNOX_API_ENDPOINT = "/3/"
