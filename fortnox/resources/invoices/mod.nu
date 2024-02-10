@@ -55,7 +55,7 @@ export def --env main [
     
     if ($from_date | is-empty) and ($to_date | is-empty) {
         if not ($full_date | is-empty) {
-            $date_range = (get_daterange_from_params --for-year $for_year --for-month $for_month --for-day $for_day --for-quarter $for_quarter)
+            $date_range = (get_daterange_from_params --for-year $for_year --for-month $for_month --for-day $for_day --for-quarter $for_quarter --to-date-offset "1day")
         } else {
             $date_range = (
                 from: ($full_date | into datetime)
