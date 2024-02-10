@@ -1,0 +1,3 @@
+[submodule "dependencies/nu-ratelimit"]
+	path = dependencies/nu-ratelimit
+	url = https://github.com/joaqim/nu-ratelimit

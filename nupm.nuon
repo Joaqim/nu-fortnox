@@ -1,0 +1,16 @@
+{
+
+	name: nu-fortnox,
+	type: module,
+	version: "0.1.0",
+	script: build.nu
+	dependencies: {
+		nushell: 0.90.1
+		git: 2.40.1
+		optionals: {
+			"use mongodb": {
+				mongosh: 2.1.3
+			}
+		}
+	}
+}
