@@ -27,8 +27,8 @@ def main [package_file: path] {
 
     let $install_mod = ($install_destination | path join "mod.nu")
 
-    let $last_commit_msg = ^git -C $install_destination -n 1 --pretty=format:%s
-    let $last_commit_date = ^git -C $install_destination log --pretty=format:%aD -n 1 | into datetime
+    let $last_commit_msg = ^git -C $install_source log --pretty=format:%s -n 1 | lines --skip-empty | str join ";"
+    let $last_commit_date = ^git -C $install_source log --pretty=format:%aD -n 1 | into datetime
 
     let version_cmd = [
          "# see the version of nu-fortnox that is currently installed"
@@ -43,10 +43,10 @@ def main [package_file: path] {
         $"        version: \"($v)+($n)\""
         $"        branch: \"(^git -C $install_destination branch --show-current)\""
         $"        commit: {"
-        $"              message: \"($last_commit_msg)\""
+        $"              message: ($last_commit_msg | to nuon)"
         $"              hash: \"(^git -C $install_destination rev-parse HEAD)\""
         $"              date: \(($last_commit_date | to nuon)\)"
-                  "}"
+         "        }"
         $"        install_date: \((date now | to nuon)\)"
          "    }"
          "}"
