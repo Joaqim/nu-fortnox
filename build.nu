@@ -41,7 +41,7 @@ def main [package_file: path] {
          "    {"
         $"        version: \"($v)+($n)\""
         $"        branch: \"(^git -C $install_destination branch --show-current)\""
-        $"        commit: {
+        $"        commit: {"
         $"              hash: \"(^git -C $install_destination rev-parse HEAD)\""
         $"              date: \(($last_commit_date | to nuon)\)"
                   "}"
