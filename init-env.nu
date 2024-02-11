@@ -1,4 +1,6 @@
 
+use std log
+
 export-env {
     source .env.nu
 
@@ -14,7 +16,7 @@ export-env {
     }
 
     try {
-        if $env._FORTNOX_USE_CACHE? {
+        if $env._FORTNOX_USE_CACHE? == true {
             $env._FORTNOX_CACHE_DIR = ($env._FORTNOX_DATA_DIR | path join "cache")
             $env._FORTNOX_CACHE_VALID_DURATION = (
                 $env._FORTNOX_CACHE_VALID_DURATION? 
@@ -33,8 +35,8 @@ export-env {
         } else {
             $env._FORTNOX_USE_CACHE = false
         }
-    } catch {
-        # TODO: Log error
+    } catch {|err|
+        log error $"Failed to initialize cache for nu-fortnox module: ($err)"
         $env._FORTNOX_USE_CACHE = false
     }
 

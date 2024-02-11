@@ -36,7 +36,7 @@ def --env _request [
             ratelimit_sleep
 
             # Prevents infinite loop, exits after max retries:
-            if $current_retry_count > ($env._FORTNOX_MAX_RETRIES_COUNT | default 5) {
+            if $current_retry_count > ($env._FORTNOX_MAX_RETRIES_COUNT? | default 5) {
                 error make {
                     msg: $"Request failed after ($current_retry_count) tries - ($in.body.error)",
                     label: {
