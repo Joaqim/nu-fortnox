@@ -3,9 +3,9 @@ use ../fetch_fortnox_resource.nu
 use ../../../utils/ratelimit_sleep.nu
 use ../../../utils/get_daterange_from_params.nu
 
-
+# Returns an empty list if no resources found
 export def --env main [
-    --invoice-number (-i): int, # Fetch specific invoice, returns list<record> 
+    invoice_number? : int # Get a known invoice by its invoice number
     --filter-by-your-order-number (-f): string, # Filter by 'YourOrderNumber'
     --customer-name (-c): string, # Filter by 'CustomerName'
 

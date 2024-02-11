@@ -18,24 +18,23 @@ fortnox invoices -l 1
 ## Installation
 
 ```nushell
-git submodule update --init
 use nupm
 nump install --force --path .
 ```
 
 ## Usage
 
+As module:
 ```nushell
-use .
+use nu-fortnox
 overlay use nu-fortnox
 fortnox invoices -h # To show all available flags
 ```
 or
 ```nushell
-use . *
+use ./nu-fortnox *
 fortnox invoices -h # To show all available flags
 ```
-
 
 
 ### Configuration
@@ -56,7 +55,6 @@ type {
 
 It will try to create/update fields for 'expiresAt', 'accessToken' and 'refreshToken' after using refresh token with Fortnox API.
 
-
 ### Create .env.nu
 
 ```nushell
@@ -70,7 +68,6 @@ export-env {
 ### Flags
 ```typescript
 Flags:
-  -i, --invoice-number <Int> - Fetch specific invoice, returns list<record>
   -f, --filter-by-your-order-number <String> - Filter by 'YourOrderNumber'
   -c, --customer-name <String> - Filter by 'CustomerName'
   -m, --last-modified <DateTime> - Filter by last modification date for Fortnox documents
@@ -102,5 +99,9 @@ Flags:
   -s, --sort-by <String> - Set 'sortby' param for Fortnox request (default: 'invoicedate')
   -s, --sort-order <String> - Set 'sortorder' param for Fortnox Request, expects 'ascending' or 'descending' (default: 'descending')
   -h, --help - Display the help message for this command
+
+Parameters:
+  invoice_number <int>: Get a known invoice by its invoice number (optional)
+
 ```
 
