@@ -17,8 +17,9 @@ def main [package_file: path] {
         }
     } else {
         ^git clone $install_source $install_destination
-        touch ($install_destination | path join ".env.nu")
     }
+
+    touch ($install_destination | path join ".env.nu")
     
     try { ^git -C $install_destination submodule update --init --recursive }
 
