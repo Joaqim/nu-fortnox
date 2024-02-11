@@ -4,11 +4,7 @@ use std log
 export-env {
 
     source env.nu
-
-    # Secrets:
-    if (($env.CURRENT_FILE | path dirname) | path join ".env.nu" | path exists) {
-        try { source .env.nu }
-    }
+    source .env.nu
 
     if ([ $env.DB_CONNECTION_STRING? ] | any { is-empty }) {
         error make {
