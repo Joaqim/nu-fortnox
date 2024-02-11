@@ -35,7 +35,7 @@ def main [package_file: path] {
         $"        branch: \"(^git -C $install_source branch --show-current)\",",
         $"        commit: \"(^git -C $install_source rev-parse HEAD)\",",
         $"        last_commit_date: \(($last_commit_date | to nuon)\),",
-        $"        date: \((date now | to nuon)\),",
+        $"        installation_date: \((date now | to nuon)\),",
          "    }",
          "}",
     ]
@@ -45,8 +45,8 @@ def main [package_file: path] {
 
     print "nu-fortnox is now installed as a module."
     print "To use:"
-    print "`use nu-fortnox`"
-    print "`overlay use nu-fortnox`"
-    print "`fortnox invoices -h`"
+    print "\tuse nu-fortnox"
+    print "\toverlay use nu-fortnox"
+    print "\tfortnox invoices -h"
     null
 }
