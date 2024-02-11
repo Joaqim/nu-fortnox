@@ -34,7 +34,7 @@ def main [package_file: path] {
         $"        version: \"($v)+($n)\",",
         $"        branch: \"(^git -C $install_source branch --show-current)\",",
         $"        commit: \"(^git -C $install_source rev-parse HEAD)\",",
-        $"        last_commit_date: \(($last_commit_date)\),",
+        $"        last_commit_date: \(($last_commit_date | to nuon)\),",
         $"        date: \((date now | to nuon)\),",
          "    }",
          "}",
