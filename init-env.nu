@@ -6,14 +6,8 @@ export-env {
     source env.nu
     source .env.nu
 
-    if ([ $env.DB_CONNECTION_STRING? ] | any { is-empty }) {
-        error make {
-            msg: "Missing required environment variables. See ./.env.example.nu"
-            label: {
-                text: "Missing DB_CONNECTION_STRING"
-                span: (metadata $env.DB_CONNECTION_STRING).span
-            }
-        }
+    if ($env.DB_CONNECTION_STRING?  | is-empty ) {
+        log critical "Missing required environment variable: 'DB_CONNECTION_STRING'. See ./.env.example.nu"
     }
 
     if XDG_CONFIG_DIR in $env and ($env.XDG_CONFIG_DIR | path exists)  {
