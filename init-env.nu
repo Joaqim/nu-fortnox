@@ -2,7 +2,21 @@
 use std log
 
 export-env {
+
+    source env.nu
+
+    # Secrets:
     source .env.nu
+
+    if ([ $env.DB_CONNECTION_STRING? ] | any { is-empty }) {
+        error make {
+            msg: "Missing required environment variables. See ./.env.example.nu"
+            label: {
+                text: "Missing DB_CONNECTION_STRING"
+                span: (metadata $env.DB_CONNECTION_STRING).span
+            }
+        }
+    }
 
     if XDG_CONFIG_DIR in $env and ($env.XDG_CONFIG_DIR | path exists)  {
         $env._FORTNOX_CONF_DIR = ($env.XDG_CONFIG_DIR | path join fortnox)
