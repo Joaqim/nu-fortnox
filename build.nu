@@ -10,40 +10,49 @@ def main [package_file: path] {
     let $package_name = $nupm_pkg_file.name
     let $install_destination = ($modules_dir | path join $package_name)
 
-    ^git clone $install_source $install_destination
+    if ($install_destination | path exists) {
+        try {
+            ^git -C $install_destination checkout HEAD -- mod.nu
+            ^git -C $install_destination pull $install_source
+        }
+    } else {
+        ^git clone $install_source $install_destination
+    }
     
     try { ^git -C $install_destination submodule update --init --recursive }
 
     let $v = $nupm_pkg_file.version
-    let $n =  ^git -C $install_source describe --tags --abbrev=0 | parse "{v}-{n}-{r}" | into record | get n? | default 0
+    let $n =  ^git -C $install_destination describe --tags --abbrev=0 | parse "{v}-{n}-{r}" | into record | get n? | default 0
 
     let $install_mod = ($install_destination | path join "mod.nu")
 
-    let $last_commit_date = ^git -C $install_source log --pretty=format:%aD -n 1 | into datetime
+    let $last_commit_date = ^git -C $install_destination log --pretty=format:%aD -n 1 | into datetime
 
     let version_cmd = [
-         "# see the version of nu-fortnox that is currently installed",
-         "#",
-         "# # Examples",
-         "# ```nushell",
-         "# # get the version of nu-fortnox",
-         "# fortnox version",
-         "# ```",
-         "export def \"fortnox version\" []: nothing -> record<version: string, branch: string, commit: string, date: datetime> {",
-         "    {",
-        $"        version: \"($v)+($n)\",",
-        $"        branch: \"(^git -C $install_source branch --show-current)\",",
-        $"        commit: \"(^git -C $install_source rev-parse HEAD)\",",
-        $"        last_commit_date: \(($last_commit_date | to nuon)\),",
-        $"        installation_date: \((date now | to nuon)\),",
-         "    }",
-         "}",
+         "# see the version of nu-fortnox that is currently installed"
+         "#"
+         "# # Examples"
+         "# ```nushell"
+         "# # get the version of nu-fortnox"
+         "# fortnox version"
+         "# ```"
+         "export def \"fortnox version\" []: nothing -> record<version: string, branch: string, commit: record<hash: string, date: datetime>, install_date: datetime> {"
+         "    {"
+        $"        version: \"($v)+($n)\""
+        $"        branch: \"(^git -C $install_destination branch --show-current)\""
+        $"        commit: {
+        $"              hash: \"(^git -C $install_destination rev-parse HEAD)\""
+        $"              date: \(($last_commit_date | to nuon)\)"
+                  "}"
+        $"        install_date: \((date now | to nuon)\)"
+         "    }"
+         "}"
     ]
 
     "\n" | save --append $install_mod
     $version_cmd | str join "\n" | save --append $install_mod
 
-    print "nu-fortnox is now installed as a module."
+    print $"nu-fortnox ($v)+($n) is now installed as a module."
     print "To use:"
     print "\tuse nu-fortnox"
     print "\toverlay use nu-fortnox"
