@@ -4,7 +4,7 @@ use std log
 export-env {
 
     source ./fortnox/config.nu
-    source .env.nu
+    try { source .env.nu }
 
     if ($env.DB_CONNECTION_STRING?  | is-empty ) {
         log critical "Missing required environment variable: 'DB_CONNECTION_STRING'. See ./.env.example.nu"
