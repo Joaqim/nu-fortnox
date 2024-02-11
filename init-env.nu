@@ -6,7 +6,9 @@ export-env {
     source env.nu
 
     # Secrets:
-    source .env.nu
+    if (($env.CURRENT_FILE | path dirname) | path join ".env.nu" | path exists) {
+        try { source .env.nu }
+    }
 
     if ([ $env.DB_CONNECTION_STRING? ] | any { is-empty }) {
         error make {
