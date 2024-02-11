@@ -3,7 +3,7 @@ use std log
 
 export-env {
 
-    source env.nu
+    source ./fortnox/config.nu
     source .env.nu
 
     if ($env.DB_CONNECTION_STRING?  | is-empty ) {
@@ -26,7 +26,7 @@ export-env {
             $env._FORTNOX_CACHE_DIR = ($env._FORTNOX_DATA_DIR | path join "cache")
             $env._FORTNOX_CACHE_VALID_DURATION = (
                 $env._FORTNOX_CACHE_VALID_DURATION? 
-                | default ('5min' | into duration)
+                | default (5min | into duration)
             )
 
             if not ( $env._FORTNOX_CACHE_DIR | path exists) {
