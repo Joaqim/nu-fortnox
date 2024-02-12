@@ -9,10 +9,11 @@ def main [package_file: path] {
     let $nupm_pkg_file = (open ($install_source | path join "nupm.nuon"))
     let $package_name = $nupm_pkg_file.name
     let $install_destination = ($modules_dir | path join $package_name)
+    let $version_nu = ($install_destination | path join "fortnox" "version.nu")
 
     if ($install_destination | path exists) {
         try {
-            ^git -C $install_destination checkout HEAD -- mod.nu
+            ^git -C $install_destination checkout HEAD -- "fortnox/version.nu"
             ^git -C $install_destination pull $install_source
         }
     } else {
@@ -26,7 +27,6 @@ def main [package_file: path] {
     let $v = $nupm_pkg_file.version
     let $n =  ^git -C $install_destination describe --tags --abbrev=0 | parse "{v}-{n}-{r}" | into record | get n? | default 0
 
-    let $install_mod = ($install_destination | path join "mod.nu")
 
     let $last_commit_msg = ^git -C $install_source log --pretty=format:%s -n 1 | lines --skip-empty | str join ";"
     let $last_commit_date = ^git -C $install_source log --pretty=format:%aD -n 1 | into datetime
@@ -53,8 +53,8 @@ def main [package_file: path] {
          "}"
     ]
 
-    "\n" | save --append $install_mod
-    $version_cmd | str join "\n" | save --append $install_mod
+    "\n" | save -f $version_nu
+    $version_cmd | str join "\n" | save --append $version_nu
 
     print $"nu-fortnox ($v)+($n) is now installed as a module."
     print "To use:"
