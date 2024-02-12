@@ -4,15 +4,16 @@ export def main [resources: string] -> list<record> {
     (match $resources {
         invoices => ( 
             $documents
-            | reject --ignore-errors CustomerName CustomerEmail DeliveryAddress EmailInformation
+            | reject --ignore-errors CustomerName CustomerEmail DeliveryAddress EmailInformation EDIInformation
             | items {|$key, value| [$key $value]}
             | reduce -f {} {|it, acc|
                 (
-                    if ( $it.0 =~ "^(City|ZipCode|Phone1|Phone2)$" ) 
+                    if ( $it.0 =~ "^(City|Address1|ZipCode|Phone1|Phone2)$" ) 
                     or ( $it.0 =~ "^Delivery(?!Country)") 
                     {
                         $acc
                     } else {
+
                         ($acc | upsert $it.0 $it.1)
                     }
                 )
