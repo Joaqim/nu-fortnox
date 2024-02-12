@@ -89,6 +89,7 @@ use ./create_fortnox_resource_url.nu
 use ../../utils/url_encode_params.nu
 use ../../utils/compact_record.nu
 use ../../utils/cache/
+use ../../utils/verify_page_range_and_params.nu
 
 export def --env main [
         resources: string,
@@ -100,6 +101,11 @@ export def --env main [
         --no-cache,
         --obfuscate,
         --no-meta
+        --dry-run
+    ] {
+    
+    (verify_page_range_and_params $page $params)
+
     if ($dry_run) {
         log info ("Dry-run: GET: " + (create_fortnox_resource_url $"($resources)" $params --page=(-100) -a $additional_path -i $id) | str replace "%2D100" $"($page.0)..($page.99? | default 100)")
         return
