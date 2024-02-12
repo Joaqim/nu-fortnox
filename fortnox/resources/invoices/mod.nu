@@ -27,6 +27,7 @@ export def --env main [
     --filter-by-unpaidoverdue, # Filter by 'unpaidoverdue' status in Fortnox
 
     --no-cache, # Don't use cache for request. NOTE: received resource doesn't overwrite existing cache
+    --dry-run, # Dry run, log the Fortnox API url, returns 'nothing'
 
     --brief (-b), # Remove empty values
     --obfuscate (-O), # Remove Customer's info, but not customer's country
@@ -63,7 +64,7 @@ export def --env main [
         }
     }
 
-    (fetch_fortnox_resource "invoices" --id $invoice_number --page $page --brief=($brief) --obfuscate=($obfuscate) --no-cache=($no_cache) --no-meta=($no_meta) {
+    (fetch_fortnox_resource "invoices" --id $invoice_number --page $page --brief=($brief) --obfuscate=($obfuscate) --no-cache=($no_cache) --no-meta=($no_meta) --dry-run=($dry_run) {
             limit: $limit,
             sortby: $sort_by,
             sortorder: $sort_order,

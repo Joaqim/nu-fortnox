@@ -1,5 +1,6 @@
 use ../../utils/ratelimit_sleep.nu
 use ../auth/get_auth_headers.nu
+use std log
 
 # Returns the body of the Fortnox response as json
 def --env _request [
@@ -99,17 +100,10 @@ export def --env main [
         --no-cache,
         --obfuscate,
         --no-meta
-    ] {
-    if $page != 1..1 and $params.limit != 100 {
-        error make {
-            msg: "Unexpected param value"
-            label: {
-                text: "Expected '--limit (-l)' to be 100 when fetching more than 1 page '--page (-p)'."
-                span: (metadata $params.limit).span
-            }
-        }
+    if ($dry_run) {
+        log info ("Dry-run: GET: " + (create_fortnox_resource_url $"($resources)" $params --page=(-100) -a $additional_path -i $id) | str replace "%2D100" $"($page.0)..($page.99? | default 100)")
+        return
     }
-
     ratelimit_sleep
     mut $result = []
     let $cache_key = $"($resources)_(url_encode_params {...$params, page: ( $page | to nuon ), add: $additional_path, id: $id})"
