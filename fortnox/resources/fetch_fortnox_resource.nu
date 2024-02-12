@@ -126,6 +126,7 @@ export def --env main [
 
             let $resource: any = (_request GET $url)
 
+            # If there is no MetaInformation, assume single resource in total with no pagination needed.
             if (($resource.MetaInformation? | describe) != 'record') {
                 $result = [$resource]
                 break

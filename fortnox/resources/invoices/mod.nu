@@ -12,22 +12,19 @@ export def --env main [
     --last-modified (-m): datetime, # Filter by last modification date for Fortnox documents
 
     --from-date (-s): string, # Fortnox 'fromdate' param, expects 'YYYY-M-D'
-    --to-date (-e): string, # Fortnox 'fromdate' param, expects 'YYYY-M-D'
+    --to-date (-e): string, # Fortnox 'todate' param, expects 'YYYY-M-D'
+    --date (-d): string, # Sets both 'fromdate' and 'todate' to this value
 
     --for-year (-Y): int, # Specify from/to date range by year, expects integer above 1970
     --for-quarter (-Q): int, # Specify from/to date range by quarter, expects integer [1-4]
     --for-month (-M): int, # Specify from/to date range by month, expects integer [1-12]
     --for-day (-D): int, # Specify from/to date range by day, expects integer [1-32]
 
-    --full-date: string, # Specify specific date WIP
-
     --filter-by-unbooked, # Filter by 'unbooked' status in Fortnox
     --filter-by-cancelled, # Filter by 'cancelled' status in Fortnox
     --filter-by-fullypaid, # Filter by 'fullypaid' status in Fortnox
     --filter-by-unpaid, # Filter by 'unpaid' status in Fortnox
     --filter-by-unpaidoverdue, # Filter by 'unpaidoverdue' status in Fortnox
-
-    --filter-override (-F): string, # Use specified filter param in Fortnox request
 
     --no-cache, # Don't use cache for request. NOTE: received resource doesn't overwrite existing cache
 
@@ -39,7 +36,7 @@ export def --env main [
     --sort-order (-s): string = 'descending', # Set 'sortorder' param for Fortnox Request, expects 'ascending' or 'descending'
 ] -> list<record> {
     let $filter = (
-        bool_flags_to_filter --filter-override $filter_override {
+        bool_flags_to_filter {
             cancelled: $filter_by_cancelled
             unbooked: $filter_by_unbooked
             fullypaid: $filter_by_fullypaid
@@ -49,23 +46,20 @@ export def --env main [
     )
 
     mut $date_range = {
-        from: $from_date
-        to: $to_date
+        from: ($from_date | default $date)
+        to: (
+            $to_date 
+            | default $date 
+            | default (
+                date now | format date "%Y-%m-%d"
+            )
+        )
     }
     
     if ($from_date | is-empty) and ($to_date | is-empty) {
-        if ($full_date | is-empty) {
+        if ([$for_quarter $for_year $for_month $for_day] | any { not ( $in | is-empty ) }) {
             $date_range = (get_daterange_from_params --for-year $for_year --for-month $for_month --for-day $for_day --for-quarter $for_quarter --to-date-offset "1day")
-        } else {
-            $date_range = (
-                from: ($full_date | into datetime)
-                to: ($full_date | into datetime)
-            )
         }
-    } else {
-        # Debug:
-        print ($date_range.from | format date "%Y-%m-%dT%H:%M:%S.%9f")
-        print ($date_range.to | format date "%Y-%m-%dT%H:%M:%S.%9f")
     }
 
     (fetch_fortnox_resource "invoices" --id $invoice_number --page $page --brief=($brief) --obfuscate=($obfuscate) --no-cache=($no_cache) {

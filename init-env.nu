@@ -4,7 +4,7 @@ use std log
 export-env {
 
     source ./fortnox/config.nu
-    try { source .env.nu }
+    source .env.nu
 
     if ($env.DB_CONNECTION_STRING?  | is-empty ) {
         log critical "Missing required environment variable: 'DB_CONNECTION_STRING'. See ./.env.example.nu"
@@ -15,6 +15,7 @@ export-env {
     } else {
         $env._FORTNOX_CONF_DIR = ($env.HOME | path join .fortnox)
     }
+
     if XDG_DATA_HOME in $env and ($env.XDG_DATA_HOME | path exists)  {
         $env._FORTNOX_DATA_DIR = ($env.XDG_DATA_HOME | path join fortnox)
     } else {
@@ -24,10 +25,11 @@ export-env {
     try {
         if $env._FORTNOX_USE_CACHE? == true {
             $env._FORTNOX_CACHE_DIR = ($env._FORTNOX_DATA_DIR | path join "cache")
-            $env._FORTNOX_CACHE_VALID_DURATION = (
-                $env._FORTNOX_CACHE_VALID_DURATION? 
-                | default (5min | into duration)
-            )
+            if ($env._FORTNOX_CACHE_VALID_DURATION? | describe) != 'duration' {
+                $env._FORTNOX_CACHE_VALID_DURATION = (
+                    $env._FORTNOX_CACHE_VALID_DURATION? | default 5min | into duration
+                )
+            }
 
             if not ( $env._FORTNOX_CACHE_DIR | path exists) {
                 mkdir $env._FORTNOX_CACHE_DIR

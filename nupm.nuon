@@ -1,7 +1,7 @@
 {
 	name: nu-fortnox
 	type: custom
-	version: "0.1.4"
+	version: "0.1.5"
 	script: install.nu
 	dependencies: {
 		nushell: 0.90.1
