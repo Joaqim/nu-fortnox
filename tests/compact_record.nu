@@ -13,11 +13,11 @@ const $TEST_INPUT_RECORD = {
 }
 
 export def "Remove 'null' values from record" [] {
-    let $result = (compact_record $TEST_INPUT_RECORD) 
+    let $result = $TEST_INPUT_RECORD | compact_record
     assert equal $result ($TEST_INPUT_RECORD | reject NullValue)
 }
 
 export def "Remove 'null' and empty values from record" [] {
-    let $result = (compact_record $TEST_INPUT_RECORD --remove-empty) 
+    let $result = $TEST_INPUT_RECORD | compact_record --remove-empty 
     assert equal $result ($TEST_INPUT_RECORD | reject NullValue EmptyString EmptyArray EmptyRecord)
 }

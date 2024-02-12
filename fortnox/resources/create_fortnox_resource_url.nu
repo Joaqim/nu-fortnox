@@ -12,6 +12,6 @@ export def main [
         scheme: 'https'
         host: $env._FORTNOX_API_HOST,
         path: ($env._FORTNOX_API_ENDPOINT | path join $resources $"($additional_path)" $"($id)" ),
-        params: ( url_encode_params ( compact_record --remove-empty {...$params, page: $page} ))
+        params: ( url_encode_params ( {...$params, page: $page} | compact_record --remove-empty ))
     } | url join)
 }

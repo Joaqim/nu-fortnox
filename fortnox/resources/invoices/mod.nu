@@ -30,6 +30,7 @@ export def --env main [
 
     --brief (-b), # Remove empty values
     --obfuscate (-O), # Remove Customer's info, but not customer's country
+    --no-meta (-N), # Remove Fortnox 'MetaInformation' for pagination: @TotalResource, @TotalPages, @CurrentPage
     --limit (-l): int = 100, # Limit how many resources to fetch, expects integer [1-100]
     --page (-p): range = 1..1, # If range is higher than 1..1, limit must be set to 100
     --sort-by (-s): string = 'invoicedate', # Set 'sortby' param for Fortnox request
@@ -62,7 +63,7 @@ export def --env main [
         }
     }
 
-    (fetch_fortnox_resource "invoices" --id $invoice_number --page $page --brief=($brief) --obfuscate=($obfuscate) --no-cache=($no_cache) {
+    (fetch_fortnox_resource "invoices" --id $invoice_number --page $page --brief=($brief) --obfuscate=($obfuscate) --no-cache=($no_cache) --no-meta=($no_meta) {
             limit: $limit,
             sortby: $sort_by,
             sortorder: $sort_order,

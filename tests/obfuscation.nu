@@ -13,7 +13,7 @@ export def "Can obfuscate Customer information in invoice" [] {
     }
 
     assert equal (
-            obfuscate_fortnox_resource invoices $mockInvoice
+            $mockInvoice | obfuscate_fortnox_resource invoices 
     ) (
             $mockInvoice | reject CustomerName CustomerEmail EmailInformation City DeliveryCity
     )

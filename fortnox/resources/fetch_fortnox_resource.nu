@@ -98,6 +98,7 @@ export def --env main [
         --brief,
         --no-cache,
         --obfuscate,
+        --no-meta
     ] {
     if $page != 1..1 and $params.limit != 100 {
         error make {
@@ -111,7 +112,7 @@ export def --env main [
 
     ratelimit_sleep
     mut $result = []
-    let $cache_key = $"($resources)_(url_encode_params {...$params, page: ( $page | first ), add: $additional_path, id: $id})"
+    let $cache_key = $"($resources)_(url_encode_params {...$params, page: ( $page | to nuon ), add: $additional_path, id: $id})"
 
     if $env._FORTNOX_USE_CACHE and not $no_cache {
         let $cached_result = (cache load_from_file $cache_key)
@@ -144,15 +145,27 @@ export def --env main [
         }
     }
 
+    if not ($result.0.MetaInformation? | is-empty) {
+        if ($no_meta) {
+            $result = ($result | reject MetaInformation)
+        } else {
+            let $fortnox_resource_payload = $result.0 | reject MetaInformation
+            let $fortnox_resource_payload_key = $fortnox_resource_payload | columns | first
+            # Move MetaInformation columns to the end of the table
+            $result = ($result | move MetaInformation --after $fortnox_resource_payload_key)
+        }
+    }
     $result = ($result | flatten --all)
 
     (match [$obfuscate $brief] {
-        [true false] => ($result | each { obfuscate_fortnox_resource $resources $in })
-        [false true] => ($result | each { compact_record $in --remove-empty })
+        [true false] => ($result | each { obfuscate_fortnox_resource $resources } )
+        [false true] => ($result | reject @url | each { compact_record --remove-empty } )
         [true true] => (
-            $result
-            | each { compact_record $in --remove-empty }
-            | each { obfuscate_fortnox_resource $resources $in }
+            $result 
+            | reject @url
+            | each {
+                compact_record --remove-empty | obfuscate_fortnox_resource $resources 
+            }
         )
         _ => ($result)
     })
