@@ -12,8 +12,9 @@ export def --env main [
     --last-modified (-m): datetime, # Filter by last modification date for Fortnox documents
 
     --from-date (-s): string, # Fortnox 'fromdate' param, expects 'YYYY-M-D'
-    --to-date (-e): string, # Fortnox 'todate' param, expects 'YYYY-M-D'
+    --to-date (-e): string, # Fortnox 'todate' param, expects 'YYYY-M-D, cannot not be used without 'from-date', 'from', 'date' or 'for-[year quarter month day]
     --date (-d): string, # Sets both 'fromdate' and 'todate' to this value
+    --from: string, # From date in readable duration string, see 'into datetime -n'
 
     --for-year (-Y): int, # Specify from/to date range by year, expects integer above 1970
     --for-quarter (-Q): int, # Specify from/to date range by quarter, expects integer [1-4]
@@ -47,28 +48,25 @@ export def --env main [
         }
     )
 
-    mut $date_range = {
-        from: ($from_date | default $date)
-        to: (
-            $to_date 
-            | default $date 
-            | default (
-                date now | format date "%Y-%m-%d"
-            )
-        )
-    }
-    
-    if ($from_date | is-empty) and ($to_date | is-empty) {
-        if ([$for_quarter $for_year $for_month $for_day] | any { not ( $in | is-empty ) }) {
-            $date_range = (get_daterange_from_params --for-year $for_year --for-month $for_month --for-day $for_day --for-quarter $for_quarter --to-date-offset "1day")
-        }
-    }
+    let $date_range = (
+        get_daterange_from_params 
+            --for-year $for_year
+            --for-quarter $for_quarter
+            --for-month $for_month
+            --for-day $for_day
+            --date $date
+            --from-date $from_date
+            --to-date $to_date
+            --to-date-precision 1day
+            --from $from
+    )
 
     (fetch_fortnox_resource "invoices" --id $invoice_number --page $page --brief=($brief) --obfuscate=($obfuscate) --no-cache=($no_cache) --no-meta=($no_meta) --dry-run=($dry_run) {
             limit: $limit,
             sortby: $sort_by,
             sortorder: $sort_order,
             lastmodified: $last_modified,
+
             fromdate: $date_range.from,
             todate: $date_range.to,
 

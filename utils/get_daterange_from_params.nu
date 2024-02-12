@@ -3,11 +3,30 @@ export def main [
     --for-quarter: int
     --for-month: int
     --for-day: int 
-    --date-affix = "T00:00.0000+01:00"
-    --to-date-offset = "0ns"
+    --date: string
+    --from: string
+    --from-date: string
+    --to-date: string
+    --date-affix = "T00:00.0000"
+    --utc-offset = 1 # UTC+1 local Europe/Stockholm time
+    --to-date-precision = 1ns
 ] -> record<from: datetime, to: datetime> {
     if ([$for_year $for_quarter $for_month $for_day] | all {is-empty}) {
-        return {from: null, to: null}
+        if ([$from_date $from $date] | all { is-empty }) {
+            return {
+                from: null,
+                to: null
+            }
+        }
+        return {
+            from: ($from_date  | default $from | default $date | into datetime | format date "%Y-%m-%d")
+            to: ($to_date
+                    | default $date
+                    | default (
+                        date now | format date "%Y-%m-%d"
+                    )
+                )
+        }
     }
 
     let $year = (
@@ -47,12 +66,12 @@ export def main [
             }
         }
         return {
-            from: ($"($year)-(($for_quarter - 1) * 3 + 1)-01($date_affix)" | into datetime)
+            from: ($"($year)-(($for_quarter - 1) * 3 + 1)-01($date_affix)" | into datetime --offset $utc_offset)
             to: (
                 if $for_quarter == 4 {
-                    (($"($year + 1)-01-01($date_affix)" | into datetime) - ($to_date_offset | into duration))
+                    (($"($year + 1)-01-01($date_affix)" | into datetime --offset $utc_offset) - ($to_date_precision | into duration))
                 } else {
-                    (($"($year)-($for_quarter * 3 + 1)-01($date_affix)" | into datetime) - ($to_date_offset | into duration))
+                    (($"($year)-($for_quarter * 3 + 1)-01($date_affix)" | into datetime --offset $utc_offset) - ($to_date_precision | into duration))
                 }
             )
         }
@@ -84,8 +103,8 @@ export def main [
             }
         }
         return {
-            from: ($"($year)-($month)-($for_day)($date_affix)" | into datetime)
-            to: (($"($year)-($month)-($for_day + 1)($date_affix)" | into datetime) - ($to_date_offset | into duration))
+            from: ($"($year)-($month)-($for_day)($date_affix)" | into datetime --offset $utc_offset)
+            to: (($"($year)-($month)-($for_day + 1)($date_affix)" | into datetime --offset $utc_offset) - ($to_date_precision | into duration))
         }
     }
 
@@ -101,8 +120,8 @@ export def main [
         }
 
         return {
-            from: ($"($year)-($month)-01($date_affix)")
-            to: ($"($year)-($month + 1)-01($date_affix)" - ($to_date_offset | into duration) )
+            from: ($"($year)-($month)-01($date_affix)" | into datetime --offset $utc_offset)
+            to: ($"($year)-($month + 1)-01($date_affix)" - ($to_date_precision | into duration) )
         }
     }
 
@@ -117,14 +136,10 @@ export def main [
                 }
             }
         }
-        let $from = ( $"($for_year)-01-01($date_affix)" | into datetime)
 
-        #   format date $"($params.year)-%m-%dT%H:%M:%S.%9f"
-        mut $to = ($from + ("360day" | into duration))
-        while ($to | format date "%Y") == $for_year {
-            $to = ($to + ("1day" | into duration))
-        }
-        $to = ($to - ($to_date_offset | into duration))
+        # Date range, whole year
+        let $from = ( $"($for_year)-01-01($date_affix)" | into datetime --offset $utc_offset)
+        let $to = (($"($for_year + 1)-01-01($date_affix)" | into datetime --offset $utc_offset) - ($to_date_precision | into duration))
         
         return { 
             from: $from      
