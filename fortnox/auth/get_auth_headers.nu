@@ -5,6 +5,5 @@ export def main [
     ] -> record<Authorization: string, "Content-Type": string> {
     ({
         Authorization: $"Bearer (if ($access_token | is-empty) { (get_access_token) } else { ($access_token) })",
-        "Content-Type": "application/json",
     })
 }

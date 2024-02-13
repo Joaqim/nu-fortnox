@@ -13,7 +13,7 @@ export def main [page: range params: record] -> {
         error make {
             msg: "Unexpected param value"
             label: {
-                text: "If you want to fetch more than 100 resources, use '--page (-p)', default one page: 1..1"
+                text: "If you want to fetch more than 100 resources, use a higher page range '--page (-p)', default: one page = 1..1"
                 span: (metadata $params.limit).span
             }
         }

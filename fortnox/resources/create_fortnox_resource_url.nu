@@ -7,11 +7,12 @@ export def main [
     --page (-p): int,
     --id (-i): int,
     --additional-path (-a): string
+    --action (-A): string
     ] -> string {
     ({
         scheme: 'https'
         host: $env._FORTNOX_API_HOST,
-        path: ($env._FORTNOX_API_ENDPOINT | path join $resources $"($additional_path)" $"($id)" ),
+        path: ($env._FORTNOX_API_ENDPOINT | path join $resources $"($additional_path)" $"($id)" $"($action)" ),
         params: ( url_encode_params ( {...$params, page: $page} | compact_record --remove-empty ))
     } | url join)
 }
