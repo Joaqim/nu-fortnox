@@ -11,7 +11,7 @@ use ../../utils/cache/
 use ../../utils/verify_page_range_and_params.nu
 
 # 'invoices' -> [Invoice, Invoices], 'vouchers' -> [Voucher, Vouchers], etc...
-def _get_fortnox_payload_key [resources: string] record<singular: string, plural: string> -> {
+def _get_fortnox_payload_key [resources: string] record<singular: string, plural: string> {
     (match ($resources) {
         "invoices" => {{singular: 'Invoice', plural: 'Invoices'}}
         _ => {
@@ -26,7 +26,7 @@ def _get_fortnox_payload_key [resources: string] record<singular: string, plural
     })
 }
 
-export def --env main [
+export def main [
         resources: string,
         params?: record = {},
         --page: range = 1..1,
@@ -37,7 +37,7 @@ export def --env main [
         --obfuscate,
         --no-meta,
         --dry-run,
-        --raw, # --raw is mutually exclusive with --brief, --obfuscate and --no-meta
+        --raw, # TODO: --raw should be probably be mutually exclusive with --brief, --obfuscate and --no-meta
     ] {
     
     (verify_page_range_and_params $page $params)
@@ -48,7 +48,8 @@ export def --env main [
     }
 
     ratelimit_sleep
-    mut $result = []
+    let $resource_key : record<singular: string, plural: string> = (_get_fortnox_payload_key $resources)
+    mut $result = {}
     let $cache_key = $"($resources)_(url_encode_params {...$params, page: ( $page | to nuon ), add: $additional_path, id: $id})"
 
     if $env._FORTNOX_USE_CACHE and not $no_cache {
@@ -58,69 +59,65 @@ export def --env main [
         }
     }
 
-    mut meta_information = {}
-
+    mut $resource_list = []
+    mut $meta_information = {}
     if ($result | is-empty) {
-        for $current_page: int in $page {
+        for $current_page in $page {
             let $url: string = (create_fortnox_resource_url $"($resources)" $params --page $current_page -a $additional_path -i $id)
 
-            let $resource: any = (fortnox_request GET $url)
+            let $fortnox_payload: any = (fortnox_request GET $url)
 
-            # If there is no MetaInformation, assume single resource in total with no pagination needed.
-            if (($resource.MetaInformation? | describe) != 'record') {
-                $result = [$resource]
+            # If there is no MetaInformation, assume single resource with no pagination needed.
+            if ($fortnox_payload.MetaInformation? | is-empty) {
+                $result = $fortnox_payload
                 break
             }
 
-            if ($meta_information | is-empty) {
-                $meta_information = $resource.MetaInformation
-            }
+            $resource_list = ($resource_list | append ($fortnox_payload | reject MetaInformation | flatten --all ))
 
-            $result = ($result | append ($resource | reject MetaInformation ))
-
-            if $current_page >= $meta_information.@TotalPages {
+            if $current_page >= ($fortnox_payload.MetaInformation.@TotalPages | into int) {
+                $meta_information = $fortnox_payload.MetaInformation
                 break;
+            } else if not (($current_page + 2) in $page) {
+                $meta_information = $fortnox_payload.MetaInformation
             }
         }
 
-        if $env._FORTNOX_USE_CACHE and not $no_cache {
+        if ($result | is-empty) {
+            $result = { $resource_key.plural: $resource_list, MetaInformation: $meta_information }
+        }
+
+        if $env._FORTNOX_USE_CACHE {
             cache save_to_file $cache_key $result
         }
     }
 
-    let resource_key = (_get_fortnox_payload_key $resources)
 
     if ($raw) {
-        if ($meta_information | is-empty ) {
-            return $result.0
-        }
-        return { $resource_key.plural: [...$result], MetaInformation: $meta_information }
+        return $result
     }
 
-    if not ($meta_information | is-empty) {
-        if ($no_meta) {
-            $result = ($result | reject MetaInformation)
-        } else {
-            # Move MetaInformation record to the end of the response body
-            $result = ($result | move MetaInformation --after $resource_key.plural)
-        }
+    if ($no_meta) {
+        $result = ($result | reject --ignore-errors MetaInformation)
+    } else if not ($result.MetaInformation? | is-empty) {
+        # Move MetaInformation record to the end of the response body
+        $result = ($result | move MetaInformation --after $resource_key.plural)
     }
-
-    $result = ($result | flatten --all)
 
     def make_brief [] -> record {
-        $in | compact_record --remove-empty
+        $in | compact_record --remove-empty | reject --ignore-errors @url
     }
 
     (match [$obfuscate $brief] {
-        [true false] => ($result | each { obfuscate_fortnox_resource $resources } )
-        [false true] => ($result | reject @url | each { make_brief } )
+        [true false] => ($result | reject MetaInformation? | flatten | each { obfuscate_fortnox_resource } | flatten )
+        [false true] => ($result | reject MetaInformation? | flatten | each { make_brief } | flatten )
         [true true] => (
             $result 
-            | reject @url
+            | reject MetaInformation? 
+            | flatten
             | each {
-                make_brief | obfuscate_fortnox_resource $resources 
-            }
+                make_brief | obfuscate_fortnox_resource
+            } | flatten
         )
         _ => ($result)
     })

@@ -51,7 +51,7 @@ export def "Create POST and GET resource urls for vouchers in series S from Fort
         create_fortnox_resource_url vouchers --id 1001 --additional-path S {
         } | url parse | select path params
     ) ({ 
-        path: '/3/vouchers/S/1001'
+        path: '/3/vouchers/S/1001/'
         params: { }
     })
 }

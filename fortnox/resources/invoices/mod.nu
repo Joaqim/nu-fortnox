@@ -10,7 +10,7 @@ use ../fortnox_request.nu
 use std log
 
 # Returns an empty list if no resources found
-export def --env main [
+export def main [
     invoice_number? : int # Get a known invoice by its invoice number
     --put-action: string # Perform PUT action for invoice number: 'update', 'bookkeep' 'cancel', 'credit', 'externalprint', 'warehouseready'
     --post-action: string # Perform POST action for invoice number: 'create'
@@ -81,7 +81,7 @@ export def --env main [
             --date $date
             --from-date $from_date
             --to-date $to_date
-            --to-date-precision 1day
+            --to-date-precision 1day # Fortnox uses date format: %Y-%m-%d, so the last day in a month would be where a date range (-M) would end at 01-01 -> 01->31.
             --from $from
     )
 

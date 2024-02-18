@@ -1,21 +1,12 @@
 use ../fortnox/resources/obfuscate_fortnox_resource.nu
 
-export def "Can obfuscate Customer information in invoice" [] {
-    const $mockInvoice = {
-        "CustomerName": "Confidential",
-        "CustomerEmail": "confidential@mail.com",
-        "EmailInformation": {
-            "EmailTo": "confidential@mail.com"},
-        "Country": Sverige,
-        "City": Gothenburg,
-        "DeliveryCity": Gothenburg,
-        "DeliveryCountry": Sverige 
-    }
+export def "Can obfuscate Customer information in invoices" [] {
+    const $mockInvoices = {Invoices: [[CustomerName, CustomerEmail, EmailInformation, Country, City, DeliveryCity, DeliveryCountry]; [Confidential, confidential@mail.com, {EmailTo: confidential@mail.com}, Sverige, Gothenburg, Gothenburg, Sverige]]}
 
     assert equal (
-            $mockInvoice | obfuscate_fortnox_resource invoices 
+            $mockInvoices | obfuscate_fortnox_resource 
     ) (
-            $mockInvoice | reject CustomerName CustomerEmail EmailInformation City DeliveryCity
+            $mockInvoices.Invoices | reject CustomerName CustomerEmail EmailInformation City DeliveryCity
     )
 }
 

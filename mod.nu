@@ -1,6 +1,6 @@
 
 export-env { 
-    source ./init-env.nu 
+    use ./fortnox/ 
 }
 
 export use ./fortnox/
