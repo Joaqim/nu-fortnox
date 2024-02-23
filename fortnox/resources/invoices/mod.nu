@@ -14,7 +14,7 @@ export def main [
     invoice_number? : int # Get a known invoice by its invoice number
     --put-action: string # Perform PUT action for invoice number: 'update', 'bookkeep' 'cancel', 'credit', 'externalprint', 'warehouseready'
     --post-action: string # Perform POST action for invoice number: 'create'
-    --get-action: string # Perform GET action for invoice number: 'print', 'email', 'printreminder', 'preview', 'eprint', 'einvoice' 
+    --get-action: string # Perform GET action for invoice number: 'print', 'email', 'printreminder', 'preview', 'eprint', 'einvoice'
     --body: any # Request body to POST or PUT to Fortnox API for actions: 'create' or 'update'
     --filter-by-your-order-number (-f): string, # Filter by 'YourOrderNumber'
     --customer-name (-c): string, # Filter by 'CustomerName'
@@ -50,6 +50,7 @@ export def main [
     --sort-by (-s): string = 'invoicedate', # Set 'sortby' param for Fortnox request
     --sort-order (-s): string = 'descending', # Set 'sortorder' param for Fortnox Request, expects 'ascending' or 'descending'
 ] -> list<record> {
+    let $body = ($in | default $body);
 
     let action = (parse_actions_from_params "invoices" {put: $put_action, post: $post_action, get: $get_action} --id $invoice_number --body $body)
 
@@ -73,7 +74,7 @@ export def main [
     )
 
     let $date_range = (
-        get_daterange_from_params 
+        get_daterange_from_params
             --for-year $for_year
             --for-quarter $for_quarter
             --for-month $for_month
@@ -85,15 +86,15 @@ export def main [
             --from $from
     )
 
-    (fetch_fortnox_resource "invoices" 
+    (fetch_fortnox_resource "invoices"
             --id $invoice_number
-            --page $page 
+            --page $page
             --brief=($brief)
             --obfuscate=($obfuscate)
             --no-cache=($no_cache)
             --no-meta=($no_meta)
             --dry-run=($dry_run)
-            --raw=($raw) 
+            --raw=($raw)
             {
                 limit: $limit,
                 sortby: $sort_by,
@@ -105,6 +106,6 @@ export def main [
 
                 yourordernumber: $filter_by_your_order_number,
                 filter: $filter
-        }
+            }
     )
 }

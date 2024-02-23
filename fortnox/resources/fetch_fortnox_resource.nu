@@ -39,7 +39,7 @@ export def main [
         --dry-run,
         --raw, # TODO: --raw should be probably be mutually exclusive with --brief, --obfuscate and --no-meta
     ] {
-    
+
     (verify_page_range_and_params $page $params)
 
     if ($dry_run) {
@@ -52,7 +52,7 @@ export def main [
     mut $result = {}
     let $cache_key = $"($resources)_(url_encode_params {...$params, page: ( $page | to nuon ), add: $additional_path, id: $id})"
 
-    if $env._FORTNOX_USE_CACHE and not $no_cache {
+    if $env._FORTNOX_USE_CACHE and (not $no_cache) {
         let $cached_result = (cache load_from_file $cache_key)
         if $cached_result != null {
             $result = $cached_result
@@ -112,8 +112,8 @@ export def main [
         [true false] => ($result | reject MetaInformation? | flatten | each { obfuscate_fortnox_resource } | flatten )
         [false true] => ($result | reject MetaInformation? | flatten | each { make_brief } | flatten )
         [true true] => (
-            $result 
-            | reject MetaInformation? 
+            $result
+            | reject MetaInformation?
             | flatten
             | each {
                 make_brief | obfuscate_fortnox_resource

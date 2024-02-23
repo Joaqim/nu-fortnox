@@ -18,10 +18,10 @@ export def --env main [
         match ($method | str upcase) {
             GET => {http get $url -H $headers -e -f}
             POST => {
-                    http post $url ($body | default '') -H $headers -e -f
+                    http post --content-type application/json $url ($body | default '') -H $headers -e -f
             }
             PUT => {
-                    http put $url ($body | default '') -H $headers -e -f
+                    http put --content-type application/json $url ($body | default '') -H $headers -e -f
             }
             _ => {
                 error make {
@@ -78,7 +78,7 @@ export def --env main [
         }
         _ => {
             error make {
-                msg: $"($in.status) - ($in.body | into string )",
+                msg: $"($in.status) - ($in.body | to nuon )",
                 label: {
                     text: $"'($method | str upcase )' @ '($url)'",
                     span: (metadata $url).span

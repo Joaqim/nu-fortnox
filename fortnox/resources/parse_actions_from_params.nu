@@ -48,13 +48,22 @@ export def main [
 
         mut action = $actions_values.0
 
-        # These are just internal actions, we POST or PUT to {resousrec}/{id}/ without appending /update or /create
+        # These are just internal actions, we POST or PUT to {resource}/{id}/ without actually appending /update or /create
         if ($action =~ '^(update|create)') {
             if ($body | is-empty) {
                 error make {
-                    msg: "Empty body"
+                    msg: $"Empty body for action ($action)"
                     label: {
                         text: $"Expected --body to be defined for ($method) request @ /($resources)/"
+                        span: (metadata $actions).span
+                    }
+                }
+            }
+            if ($id | is-empty) {
+                error make {
+                    msg: $"Missing --id for ($action)"
+                    label: {
+                        text: $"Expected --id to be defined for ($method) request @ /($resources)/"
                         span: (metadata $actions).span
                     }
                 }
