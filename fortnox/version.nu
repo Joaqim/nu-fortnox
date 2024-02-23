@@ -6,8 +6,19 @@
 # fortnox version
 # ```
 export def "fortnox version" []: nothing -> record<version: string, branch: string, commit: record<message: string, hash: string, date: datetime>> {
-    let $modules_dir = $env.NUPM_HOME | path join "modules"
-    let $install_dir = ($modules_dir | path join "nu-fortnox")
+    let $install_dir = ($env.CURRENT_FILE? | path dirname | path join "nu-fortnox")
+
+    if not ($env.NUPM_HOME? | is-empty) {
+        let $modules_dir = $env.NUPM_HOME | path join "modules"
+        $install_dir = ($modules_dir | path join "nu-fortnox")
+    }
+
+    if not ($install_dir | path exists) {
+        error make {
+            msg: "Failed to find installation path of nu-fortnox."
+        }
+    }
+
     let $nupm_pkg_file = (open ($install_dir | path join "nupm.nuon"))
     let $package_name = $nupm_pkg_file.name
 
