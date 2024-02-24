@@ -34,11 +34,10 @@ export def main [
         --brief,
         --no-cache,
         --obfuscate,
-        --no-meta,
+        --with-pagination,
         --dry-run,
-        --raw, # TODO: --raw should be probably be mutually exclusive with --brief, --obfuscate and --no-meta
+        --raw, # TODO: --raw should be probably be mutually exclusive with --brief, --obfuscate and --no-pagination
     ] {
-
     (verify_page_range_and_params $page $params)
 
     if ($dry_run) {
@@ -83,41 +82,29 @@ export def main [
         }
 
         if ($result | is-empty) {
-            $result = { $resource_key.plural: $resource_list, MetaInformation: $meta_information }
+            if ($with_pagination) {
+                $result = { $resource_key.plural: $resource_list, MetaInformation: $meta_information }
+            } else {
+                $result = { $resource_key.plural: $resource_list }
+            }
         }
 
+        # NOTE: We write to cache, even when $no_cache is set
         if $env._FORTNOX_USE_CACHE {
             cache save_to_file $cache_key $result
         }
     }
 
-
     if ($raw) {
         return $result
     }
 
-    if ($no_meta) {
-        $result = ($result | reject --ignore-errors MetaInformation)
-    } else if not ($result.MetaInformation? | is-empty) {
-        # Move MetaInformation record to the end of the response body
-        $result = ($result | move MetaInformation --after $resource_key.plural)
-    }
-
     def make_brief [] -> record {
-        $in | compact_record --remove-empty | reject --ignore-errors @url
+        $in | compact_record --remove-empty | reject --ignore-errors @url @urlTaxReductionList
     }
 
-    (match [$obfuscate $brief] {
-        [true false] => ($result | reject MetaInformation? | flatten | each { obfuscate_fortnox_resource } | flatten )
-        [false true] => ($result | reject MetaInformation? | flatten | each { make_brief } | flatten )
-        [true true] => (
-            $result
-            | reject MetaInformation?
-            | flatten
-            | each {
-                make_brief | obfuscate_fortnox_resource
-            } | flatten
-        )
-        _ => ($result)
-    })
+    if ($brief == true) {
+        return $result | reject MetaInformation? | flatten | each { make_brief } | flatten
+    }
+    return $result
 }

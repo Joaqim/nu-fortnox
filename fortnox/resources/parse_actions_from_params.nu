@@ -3,7 +3,7 @@ use ../../utils/compact_record.nu
 export def main [
     resources: string
     actions: record<put: any, post: any, get: any>
-    --id: any
+    --id: int
     --body: any
     ] record<method: any, action: any> -> {
     mut $result = { method: null, action: null }
@@ -48,13 +48,22 @@ export def main [
 
         mut action = $actions_values.0
 
-        # These are just internal actions, we POST or PUT to {resource}/{id}/ without actually appending /update or /create
+        # These are just internal actions, we POST or PUT to {resource}/{id}/ without actually appending /update or /create to our Fortnox API url
         if ($action =~ '^(update|create)') {
             if ($body | is-empty) {
                 error make {
                     msg: $"Empty body for action ($action)"
                     label: {
                         text: $"Expected --body to be defined for ($method) request @ /($resources)/"
+                        span: (metadata $actions).span
+                    }
+                }
+            }
+            if ($body.Invoice? | is-empty) {
+                error make {
+                    msg: $"Invalid Invoice payload for action ($action)"
+                    label: {
+                        text: $"Expected --body to have payload: '{ Invoice: {...} }'  - ($method) request @ /($resources)/"
                         span: (metadata $actions).span
                     }
                 }

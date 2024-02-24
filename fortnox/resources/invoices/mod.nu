@@ -1,6 +1,7 @@
 use ../bool_flags_to_filter.nu
 use ../parse_actions_from_params.nu
 use ../fetch_fortnox_resource.nu
+use ../parse_ids_and_body_from_input.nu
 use ../../../utils/ratelimit_sleep.nu
 use ../../../utils/get_daterange_from_params.nu
 use ../../../utils/compact_record.nu
@@ -37,12 +38,12 @@ export def main [
     --filter-by-unpaid, # Filter by 'unpaid' status in Fortnox
     --filter-by-unpaidoverdue, # Filter by 'unpaidoverdue' status in Fortnox
 
-    --no-cache, # Don't use cache for request. NOTE: received resource doesn't overwrite existing cache
+    --no-cache, # Don't use cache for request.
     --dry-run, # Dry run, log the Fortnox API url, returns 'nothing'
 
     --brief (-b), # Remove empty values
     --obfuscate (-O), # Remove Customer's info, but not customer's country
-    --no-meta (-N), # Remove Fortnox 'MetaInformation' for pagination: @TotalResource, @TotalPages, @CurrentPage
+    --with-pagination (-P), # Return result includes Fortnox 'MetaInformation' for pagination: @TotalResource, @TotalPages, @CurrentPage
     --raw, # Returns least modified Fortnox response, --raw is mutually exclusive with --brief, --obfuscate and --no-meta
 
     --limit (-l): int = 100, # Limit how many resources to fetch, expects integer [1-100]
@@ -50,12 +51,12 @@ export def main [
     --sort-by (-s): string = 'invoicedate', # Set 'sortby' param for Fortnox request
     --sort-order (-s): string = 'descending', # Set 'sortorder' param for Fortnox Request, expects 'ascending' or 'descending'
 ] -> list<record> {
-    let $body = ($in | default $body);
+    let $data = (parse_ids_and_body_from_input "invoices" $in --id $invoice_number --body $body)
 
-    let action = (parse_actions_from_params "invoices" {put: $put_action, post: $post_action, get: $get_action} --id $invoice_number --body $body)
+    let $action = (parse_actions_from_params "invoices" {put: $put_action, post: $post_action, get: $get_action} --id $data.id --body $data.body)
 
     if not ($action | compact_record | is-empty) {
-        let $url = (create_fortnox_resource_url "invoices" --id $invoice_number --action $action.action )
+        let $url = (create_fortnox_resource_url "invoices" --id $data.id --action $action.action )
         if ($dry_run) {
             log info $"Dry-run: ($action.method) @ ($url) ($body | to nuon)"
             return
@@ -86,26 +87,54 @@ export def main [
             --from $from
     )
 
-    (fetch_fortnox_resource "invoices"
-            --id $invoice_number
-            --page $page
+    def _fetch [$id, $params, --page=1..1, --disable-pagination]: {
+        (fetch_fortnox_resource "invoices"
+            --id $id
+            --page $page 
             --brief=($brief)
             --obfuscate=($obfuscate)
             --no-cache=($no_cache)
-            --no-meta=($no_meta)
+            --with-pagination=((not $disable_pagination) and $with_pagination)
             --dry-run=($dry_run)
             --raw=($raw)
-            {
-                limit: $limit,
-                sortby: $sort_by,
-                sortorder: $sort_order,
-                lastmodified: $last_modified,
+            $params
+        )
+    }
 
-                fromdate: $date_range.from,
-                todate: $date_range.to,
+    if ($data.ids | is-empty) {
+        return (
+            _fetch $data.id {
+                    limit: $limit,
+                    sortby: $sort_by,
+                    sortorder: $sort_order,
+                    lastmodified: $last_modified,
 
-                yourordernumber: $filter_by_your_order_number,
-                filter: $filter
+                    fromdate: $date_range.from,
+                    todate: $date_range.to,
+
+                    yourordernumber: $filter_by_your_order_number,
+                    filter: $filter
             }
-    )
+        )
+    } else {
+        let $invoices = (
+            $data.ids 
+            | each { 
+                _fetch $in --disable-pagination {
+                    limit: 1
+                }
+            }
+        )
+        print ($invoices | describe)
+
+        if (($invoices | describe) == 'list<list<any>>')  {
+            return { Invoices: ($invoices | each { into record } | flatten) }
+        }
+
+        
+        if not ($invoices.Invoice? | is-empty ) {
+            return { Invoices: $invoices.Invoice }
+        }
+        return { Invoices: ($invoices | flatten | into record ) }
+    }
 }
