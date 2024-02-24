@@ -1,12 +1,26 @@
-use ../../utils/ratelimit_sleep.nu
-use ./update_remote_credentials.nu
+use ../db_client/
 
-export def main [
+export def fetch_remote_credentials [
+    ] -> record<clientIdentity: string, clientSecret: string, accessToken: string, expiresAt: string> {
+    (db_client fetch_credentials)
+}
+
+export def update_remote_credentials [
+        body: record<access_token: string, refresh_token: string, expires_in: int>
+    ] -> string {
+    (db_client update_credentials 
+        --access-token $body.access_token
+        --refresh-token $body.refresh_token
+        --expires-in $body.expires_in
+    )
+    ($body.access_token)
+}
+
+export def refresh_access_token [
     client_identity: string,
     client_secret: string,
     refresh_token: string
     ] -> string {
-    ratelimit_sleep
 
     let body = {
          grant_type: "refresh_token",
@@ -48,4 +62,34 @@ export def main [
         }
     )
 }
+
+
+
+export def has_valid_token [
+        credentials: record<accessToken: string, expiresAt: string>
+    ] -> bool {
+    (($credentials.accessToken? | is-empty) or (date now) < ($credentials.expiresAt | into datetime))
+}
+
+export def get_access_token [] -> string {
+    let credentials = (fetch_remote_credentials)
+
+    if not (has_valid_token $credentials) {
+        return (refresh_access_token $credentials.clientIdentity $credentials.clientSecret $credentials.refreshToken)
+    }
+    ($credentials.accessToken)
+}
+
+export def get_auth_headers [
+    --access-token: string = ""
+    ] -> record<Authorization: string, "Content-Type": string> {
+    ({
+        Authorization: $"Bearer (if ($access_token | is-empty) { (get_access_token) } else { ($access_token) })",
+    })
+}
+
+
+
+
+
 

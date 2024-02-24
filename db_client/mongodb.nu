@@ -11,6 +11,30 @@ export def update_one [collection_name: string, query: string, entry: string] {
     (mongosh $env.DB_CONNECTION_STRING --eval $"db.($collection_name).updateOne\(($query), { \$set: ($entry) })" --quiet | null)
 }
 
+
+export def fetch_credentials [
+    ] -> record<clientIdentity: string, clientSecret: string, accessToken: string, expiresAt: string> {
+    (db_client find_one 'credentials' $env._FORTNOX_DB_CREDENTIALS_QUERY)
+}
+
+export def update_credentials [
+        --access-token: string,
+        --refresh-token: string,
+        --expires-in: int
+    ] -> string {
+    let $expires_at = ((date now) + ($expires_in | into duration --unit sec) | to nuon)
+    let $entry = ([
+            "{"
+            $"expiresAt: ISODate\("($expires_at)"\),"
+            $'accessToken: "($access_token)",'
+            $'refreshToken: "($refresh_token)"'
+            "}"
+        ] | str join "")
+
+    (update_one 'credentials' $env._FORTNOX_DB_CREDENTIALS_QUERY $entry)
+    ($access_token)
+}
+
 export def find_one [
     collection_name: string,
     query: string,

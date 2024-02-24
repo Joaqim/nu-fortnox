@@ -1,5 +1,4 @@
 use ../../utils/ratelimit_sleep.nu
-use ../auth/get_auth_headers.nu
 use std log
 
 use ./obfuscate_fortnox_resource.nu

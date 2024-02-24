@@ -1,4 +1,4 @@
-use ../auth/get_auth_headers.nu
+use ../../auth_client/ *
 use ../../utils/ratelimit_sleep.nu
 
 # Returns the body of the Fortnox response as json
