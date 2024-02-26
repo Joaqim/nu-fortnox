@@ -28,6 +28,11 @@ def _get_fortnox_payload_key [resources: string] record<singular: string, plural
 export def main [
         resources: string,
         params?: record = {},
+
+        --method: string = "get",
+        --action: string = "",
+        --body: any = ""
+
         --page: range = 1..1,
         --id: int,
         --additional-path (-a): string = "",
@@ -38,16 +43,23 @@ export def main [
         --dry-run,
         --raw, # TODO: --raw should be probably be mutually exclusive with --brief, --obfuscate and --no-pagination
     ] {
-    (verify_page_range_and_params $page $params)
 
     if ($dry_run) {
-        log info ("Dry-run: GET @ " + (create_fortnox_resource_url $"($resources)" $params --page=(-100) -a $additional_path -i $id) | str replace "%2D100" $"($page.0)..($page.99? | default ($page| to nuon | split row ".." | last ))")
-        return
+        log info ($"Dry-run: ($method) @ " + (create_fortnox_resource_url $"($resources)" $params --action $action --page=(-100) -a $additional_path -i $id) | str replace "%2D100" $"($page.0)..($page.99? | default ($page| to nuon | split row ".." | last ))")
+        return {Invoice: {}}
     }
 
     ratelimit_sleep
     let $resource_key : record<singular: string, plural: string> = (_get_fortnox_payload_key $resources)
     mut $result = {}
+
+    if ($method != 'get') {
+        let $url = (create_fortnox_resource_url $"($resources)" $params --action $action -a $additional_path -i $id)
+        return (fortnox_request $method $url --body $body)
+    }
+
+    (verify_page_range_and_params $page $params)
+
     let $cache_key = $"($resources)_(url_encode_params {...$params, page: ( $page | to nuon ), add: $additional_path, id: $id})"
 
     if $env._FORTNOX_USE_CACHE and (not $no_cache) {
@@ -57,13 +69,13 @@ export def main [
         }
     }
 
-    mut $resource_list = []
-    mut $meta_information = {}
     if ($result | is-empty) {
+        mut $resource_list = []
+        mut $meta_information = {}
         for $current_page in $page {
-            let $url: string = (create_fortnox_resource_url $"($resources)" $params --page $current_page -a $additional_path -i $id)
+            let $url: string = (create_fortnox_resource_url $"($resources)" $params --action $action --page $current_page -a $additional_path -i $id)
 
-            let $fortnox_payload: any = (fortnox_request GET $url)
+            let $fortnox_payload: any = (fortnox_request 'get' $url)
 
             # If there is no MetaInformation, assume single resource with no pagination needed.
             if ($fortnox_payload.MetaInformation? | is-empty) {
@@ -90,7 +102,7 @@ export def main [
         }
 
         # NOTE: We write to cache, even when $no_cache is set
-        if $env._FORTNOX_USE_CACHE {
+        if $env._FORTNOX_USE_CACHE and $method == 'get' {
             cache save_to_file $cache_key $result
         }
     }

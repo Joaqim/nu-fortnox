@@ -13,7 +13,7 @@ export def main [
 
     match $resources {
         'invoices' => {
-            if (($input | describe) == 'list<int>') {
+            if (($input | describe) =~ 'list<int>|int') {
                 if not ($id | is-empty) {
                     error make {
                         msg: "Unexpected param"
@@ -24,15 +24,13 @@ export def main [
                     }
                 }
                 $result.ids = $input
-            } else if (($input | describe) == 'int') {
-                $result.ids = [$input]
             } else {
                 # Assume input is used as input for --body
                 if not ($body | is-empty) {
                     error make {
                         msg: "Unexpected param"
                         label: {
-                            text: "Cannot use --body while using pipeline input for body: any"
+                            text: "Cannot use '--body' while using pipeline input."
                             span: (metadata $body).span
                         }
                     }
