@@ -3,7 +3,7 @@ use ../../utils/compact_record.nu
 export def main [
     resources: string
     method: string
-    action: string 
+    action: string
     --id: int
     --ids: list<int>
     --body: any
@@ -19,9 +19,9 @@ export def main [
     }
 
     let $method = (match ($method | str downcase) {
-        'put' if $action =~ "^(update|bookkeep|cancel|credit|externalprint|warehouseready)$" => {"PUT"}
-        'post' if $action =~ "^(create)$" => {"POST"}
-        'get' if $action =~ "^(print|email|printreminder|preview|eprint|einvoice)$" => {"GET"}
+        'put' if $action =~ "^(update|bookkeep|cancel|credit|externalprint|warehouseready)$" => {'PUT'}
+        'post' if $action =~ "^(create)$" => {'POST'}
+        'get' if $action =~ "^(print|email|printreminder|preview|eprint|einvoice|none|)$" => {'GET'}
         _ => {
             error make {
                 msg: $"Unexpected action for method: ($method)"
@@ -33,7 +33,13 @@ export def main [
         }
     })
 
-    # These are just internal actions, we POST or PUT to {resource}/{id}/ without actually appending /update or /create to our Fortnox API url
+    # 'none', 'update' & 'create' are used internally
+    # we POST, PUT or GET @ api/{resource}/{id}/<action> without actually appending them to to our Fortnox API url request
+
+    if ($action =~ '^(none|)$') {
+        return ''
+    }
+
     if ($action =~ '^(update|create)') {
         if ($body | is-empty) {
             error make {

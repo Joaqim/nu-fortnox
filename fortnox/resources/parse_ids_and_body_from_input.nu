@@ -1,8 +1,10 @@
 
+use std log
 export def main [
     $resources: string
     $input: any
     --id: int
+    --action: string
     --body: any
     ] -> record<id: int, ids: list<int>, body: any> {
     if ($input | is-empty) {
@@ -23,15 +25,28 @@ export def main [
                         }
                     }
                 }
-                $result.ids = $input
-            } else {
-                # Assume input is used as input for --body
+                if (($input | length) == 1) {
+                    $result.id = $input.0
+                } else {
+                    $result.ids = $input
+                }
+            } else if ($action =~ '(update|create)' ) {
+                # Assume pipeline is used as body input instead of '--body'
                 if not ($body | is-empty) {
                     error make {
                         msg: "Unexpected param"
                         label: {
                             text: "Cannot use '--body' while using pipeline input."
                             span: (metadata $body).span
+                        }
+                    }
+                }
+                if  ($input | get -i Invoice | is-empty) {
+                    error make {
+                        msg: 'Invalid body'
+                        label: {
+                            text: "Expected body to contain: { Invoice: {...} }"
+                            label: (metadata $input).span
                         }
                     }
                 }
@@ -46,7 +61,7 @@ export def main [
                     span: (metadata $resources).span
                 }
             }
-        }     
+        }
     }
 
     ($result)

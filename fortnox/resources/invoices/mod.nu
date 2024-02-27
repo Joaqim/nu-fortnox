@@ -29,10 +29,10 @@ def _fortnox_invoices_filter__completion [$context: string] -> list<string> {
 
 def _fortnox_invoices_action__completion [$context: string] -> list<string> {
     let $params = ($context | split words | find --regex 'put|post|get' -i)
-    (match $params.0? {
+    (match ($params | last) {
         'put' => {['update', 'bookkeep', 'cancel', 'credit', 'externalprint', 'warehouseready']}
         'post' => {['create']}
-        'get' => {['print', 'email', 'printreminder', 'preview', 'eprint', 'einvoice']}
+        'get' => {['print', 'email', 'printreminder', 'preview', 'eprint', 'einvoice', 'none']}
         _ => {[]}
     })
 }
@@ -41,17 +41,17 @@ def _fortnox_invoices_action__completion [$context: string] -> list<string> {
 
 # Returns an empty list if no resources was found
 export def main [
-    method?: string@_fortnox_invoices_method__completion = 'get', # Perform PUT, POST or GET action for invoice at Fortnox API
-    action?: string@_fortnox_invoices_action__completion = ''
+    method: string@_fortnox_invoices_method__completion = 'get', # Perform PUT, POST or GET action for invoice at Fortnox API
+    --action: string@_fortnox_invoices_action__completion = 'none'
     --invoice-number (-i): int@_fortnox_invoice_number__completion # Get a known invoice by its invoice number
     #--put-action: string # Perform PUT action for invoice number: 'update', 'bookkeep' 'cancel', 'credit', 'externalprint', 'warehouseready'
     #--post-action: string # Perform POST action for invoice number: 'create'
     #--get-action: string # Perform GET action for invoice number: 'print', 'email', 'printreminder', 'preview', 'eprint', 'einvoice'
     --body: any # Request body to POST or PUT to Fortnox API for actions: 'create' or 'update'
-    --filter-by-your-order-number (-f): string, # Filter by 'YourOrderNumber'
+    --your-order-number (-f): string, # Filter by 'YourOrderNumber'
     --customer-name (-c): string, # Filter by 'CustomerName'
 
-    --last-modified (-m): datetime, # Filter by last modification date for Fortnox documents
+    --last-modified (-m): any, # Filter by last modification date for Fortnox documents
 
     --from-date (-s): string, # Fortnox 'fromdate' param, expects 'YYYY-M-D'
     --to-date (-e): string, # Fortnox 'todate' param, expects 'YYYY-M-D, cannot not be used without 'from-date', 'from', 'date' or 'for-[year quarter month day]
@@ -77,7 +77,7 @@ export def main [
     --sort-by (-s): string = 'documentnumber', # Set 'sortby' param for Fortnox request
     --sort-order (-s): string = 'descending', # Set 'sortorder' param for Fortnox Request, expects 'ascending' or 'descending'
 ] -> record {
-    let $data = (parse_ids_and_body_from_input "invoices" $in --id $invoice_number --body $body)
+    let $data = (parse_ids_and_body_from_input "invoices" $in --id $invoice_number --action $action --body $body)
 
     let $fortnox_action = (parse_actions_from_params "invoices" $method $action --id $data.id --ids $data.ids --body $data.body)
 
@@ -104,10 +104,10 @@ export def main [
             --from $from
     )
 
-    def _fetch [$id, $params, --page=1..1, --disable-pagination]: {
+    def _fetch [$id: any, $params, --disable-pagination]: {
         (fetch_fortnox_resource "invoices"
             --id $id
-            --page $page 
+            --page $page
             --brief=($brief)
             --obfuscate=($obfuscate)
             --no-cache=($no_cache)
@@ -123,24 +123,19 @@ export def main [
 
     if ($method != 'get' and not ($fortnox_action | is-empty)) {
         if not ($data.ids | is-empty) {
-            mut $invoices_result = [] 
+            mut $invoices_result = []
             for $id in $data.ids {
                 $invoices_result = ($invoices_result | append (_post_or_put $id).Invoice?)
             }
             return { Invoices: $invoices_result }
         } else {
-
-            let $url = (create_fortnox_resource_url "invoices" --id $data.id --action $fortnox_action )
-            if ($dry_run) {
-                log info $"Dry-run: ($method) @ ($url) - body: ($body | to nuon)"
-                return
-            }
-            return ( fortnox_request $method $url --body $body)
+            return ( _post_or_put $data.id )
         }
     }
 
     if ($data.ids | is-empty) {
-        # Fetch single invoice by it's id
+        # Fetch either single invoice by it's optional id
+        # or list of invoices
         return (
             _fetch $data.id {
                     limit: $limit,
@@ -151,15 +146,15 @@ export def main [
                     fromdate: $date_range.from,
                     todate: $date_range.to,
 
-                    yourordernumber: $filter_by_your_order_number,
+                    yourordernumber: $your_order_number,
                     filter: $filter
             }
         )
     } else {
         # Fetch multiple invoices by their ids
         let $invoices = (
-            $data.ids 
-            | each { 
+            $data.ids
+            | each {
                 _fetch $in --disable-pagination {
                     limit: 1
                 }
@@ -172,7 +167,7 @@ export def main [
             return { Invoices: ($invoices | each { into record } | flatten) }
         }
 
-        
+
         if not ($invoices.Invoice? | is-empty ) {
             log info 'Invoices as record<Invoice>'
             return { Invoices: $invoices.Invoice }

@@ -6,9 +6,17 @@ export def main [params: record] -> record {
                     return ($acc)
                 }
                 # Alt:
-                #if ($it.1 | describe) == date {
                 if $it.0 =~ "^(lastmodified|invoicedate|fromdate|todate)$" {
-                    return ($acc | upsert $it.0 ($it.1 | format date "%Y-%m-%d" | url encode))
+                    return ($acc
+                        | upsert $it.0 (
+                            (
+                                if ($it.1 | describe) == 'date' { $it.1 } else { ($it.1 | into datetime) }
+                            )
+                            | format date "%Y-%m-%d"
+                            | url encode
+                            )
+                        )
+                    )
                 }
                 ($acc | upsert $it.0 ($it.1 | into string | url encode))
          }
