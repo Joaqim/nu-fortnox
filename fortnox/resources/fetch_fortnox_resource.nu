@@ -49,16 +49,14 @@ export def main [
         return {Invoice: {}}
     }
 
-    ratelimit_sleep
-    let $resource_key : record<singular: string, plural: string> = (_get_fortnox_payload_key $resources)
-    mut $result = {}
-
     if ($method != 'get') {
         let $url = (create_fortnox_resource_url $"($resources)" $params --action $action -a $additional_path -i $id)
         return (fortnox_request $method $url --body $body)
     }
 
     (verify_page_range_and_params $page $params)
+
+    mut $result = {}
 
     let $cache_key = $"($resources)_(url_encode_params {...$params, page: ( $page | to nuon ), add: $additional_path, id: $id})"
 
@@ -88,12 +86,15 @@ export def main [
             if $current_page >= ($fortnox_payload.MetaInformation.@TotalPages | into int) {
                 $meta_information = $fortnox_payload.MetaInformation
                 break;
-            } else if not (($current_page + 2) in $page) {
+            } 
+            if not (($current_page + 2) in $page) {
                 $meta_information = $fortnox_payload.MetaInformation
             }
         }
 
+        # NOTE: We implicitly expect $resource_list to be non-empty
         if ($result | is-empty) {
+            let $resource_key : record<singular: string, plural: string> = (_get_fortnox_payload_key $resources)
             if ($with_pagination) {
                 $result = { $resource_key.plural: $resource_list, MetaInformation: $meta_information }
             } else {

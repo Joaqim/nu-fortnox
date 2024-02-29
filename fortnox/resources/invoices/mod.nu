@@ -107,11 +107,10 @@ export def main [
     --no-cache, # Don't use cache for request.
     --dry-run, # Dry run, log the Fortnox API url, returns 'nothing'
 
-    --brief (-b), # Remove empty values
-    --obfuscate (-O), # Remove Customer's info, but not customer's country
+    --brief (-b), # Filter out empty values from result
+    --obfuscate (-O), # Filter out Confidential information. Does not remove not Country ISO codes
     --with-pagination (-P), # Return result includes Fortnox 'MetaInformation' for pagination: @TotalResource, @TotalPages, @CurrentPage
-    --raw, # Returns least modified Fortnox response, --raw is mutually exclusive with --brief and --obfuscate --with-pagination ( will be used as 'true')
-
+    --raw, # Returns least modified Fortnox response, --raw is mutually exclusive with --brief, --obfuscate and --with-pagination
 ] -> record {
     let $data = (parse_ids_and_body_from_input "invoices" $in --id $invoice_number --action $action --body $body)
 
@@ -136,7 +135,7 @@ export def main [
             --date $date
             --from-date $from_date
             --to-date $to_date
-            --to-date-precision 1day # Fortnox uses date format: %Y-%m-%d, so the last day in a month would be where a date range (--month) would end at 01-01 -> 01->31.
+            --to-date-precision 1day # Fortnox uses date format: %Y-%m-%d, so the last day in a month would be where a date range (--month) would encompass 01-01 -> 01->31.
             --from $from
     )
 
