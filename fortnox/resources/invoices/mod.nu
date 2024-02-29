@@ -12,7 +12,7 @@ use std log
 
 def _fortnox_invoice_number__completion [$context: string] -> list<int> {
     try {
-        return (fetch_fortnox_resource "invoices" {limit: 10, sortby: 'documentnumber', sortorder: 'descending' } | get Invoices.DocumentNumber)
+        return (fetch_fortnox_resource "invoices" --no-cache {limit: 10, sortby: 'documentnumber', sortorder: 'descending' } | get Invoices.DocumentNumber)
     }
     return []
 }
@@ -21,11 +21,11 @@ const $method_completions = ['put', 'post', 'get']
 def _fortnox_invoices_method__completion [$context: string] -> list<string> {
     ($method_completions)
 }
-const $filter_completions = [unbooked cancelled fullypaid unpaid unpaidoverdue]
+
+const $filter_completions = [cancelled fullypaid unpaid unpaidoverdue unbooked]
 def _fortnox_invoices_filter__completion [$context: string] -> list<string> {
     ($filter_completions)
 }
-
 
 def _fortnox_invoices_action__completion [$context: string] -> list<string> {
     let $params = ($context | split words | find --regex 'put|post|get' -i)
@@ -37,6 +37,40 @@ def _fortnox_invoices_action__completion [$context: string] -> list<string> {
     })
 }
 
+const $sort_by_completions = ["customername" "customernumber" "documentnumber" "invoicedate" "ocr" "total"]
+def _fortnox_invoices_sort_by__completion [$context: string] -> list<string> {
+    return $sort_by_completions
+}
+
+def _fortnox_invoices_sort_order__completion [$context: string] -> list<string> {
+    return ['ascending', 'descending']
+}
+
+
+def _datetime_string__completion [$context: string] -> list<string> {
+    # From:
+    #(into datetime --list-human | get 'parseable human datetime examples')
+    return (
+        [
+            "Today 08:30",
+            "2022-11-07 13:25:30",
+            "15:20 Friday",
+            "Last Friday 17:00",
+            "Last Friday at 19:45",
+            "10 hours and 5 minutes ago",
+            "1 years ago",
+            "A year ago",
+            "A month ago",
+            "A week ago",
+            "A day ago",
+            "An hour ago",
+            "A minute ago",
+            "A second ago", 
+            Now
+        ]
+    )
+}
+
 #export def _test_ [$context?: string] { (_fortnox_invoices_action__completion ($context | default 'nu-fortnox fortnox invoices 53155 get ')) }
 
 # Returns an empty list if no resources was found
@@ -44,26 +78,32 @@ export def main [
     method: string@_fortnox_invoices_method__completion = 'get', # Perform PUT, POST or GET action for invoice at Fortnox API
     --action: string@_fortnox_invoices_action__completion = 'none'
     --invoice-number (-i): int@_fortnox_invoice_number__completion # Get a known invoice by its invoice number
-    #--put-action: string # Perform PUT action for invoice number: 'update', 'bookkeep' 'cancel', 'credit', 'externalprint', 'warehouseready'
-    #--post-action: string # Perform POST action for invoice number: 'create'
-    #--get-action: string # Perform GET action for invoice number: 'print', 'email', 'printreminder', 'preview', 'eprint', 'einvoice'
-    --body: any # Request body to POST or PUT to Fortnox API for actions: 'create' or 'update'
-    --your-order-number (-f): string, # Filter by 'YourOrderNumber'
-    --customer-name (-c): string, # Filter by 'CustomerName'
+    --filter: string@_fortnox_invoices_filter__completion, # Filters for invoices:  'unbooked', 'cancelled', 'fullypaid', 'unpaid', 'unpaidoverdue'
 
-    --last-modified (-m): any, # Filter by last modification date for Fortnox documents
+    --limit (-l): int = 100, # Limit how many resources to fetch, expects integer [1-100]
+    --page (-p): range = 1..1, # If range is higher than 1..1, limit must be set to 100
+    --sort-by (-s): string@_fortnox_invoices_sort_by__completion = 'documentnumber', # Set 'sortby' param for Fortnox request
+    --sort-order (-s): string@_fortnox_invoices_sort_order__completion = 'descending', # Set 'sortorder' param for Fortnox Request, expects 'ascending' or 'descending'
+
+    --body: any # Request body to POST or PUT to Fortnox API for actions: 'create' or 'update'
+
+    --your-order-number (-f): string, # Returns list of Invoice(s) filtered by YourOrderNumber
+    --customer-name (-c): string, # Returns list of Invoice(s) filtered by CustomerName
+    --last-modified (-m): any, # Returns list of Invoice(s) filtered by last modified date 
 
     --from-date (-s): string, # Fortnox 'fromdate' param, expects 'YYYY-M-D'
     --to-date (-e): string, # Fortnox 'todate' param, expects 'YYYY-M-D, cannot not be used without 'from-date', 'from', 'date' or 'for-[year quarter month day]
-    --date (-d): string, # Sets both 'fromdate' and 'todate' to this value
-    --from: string, # From date in readable duration string, see 'into datetime -h'
+    --date (-d): string, # Sets both 'fromdate' and 'todate' to this value, useful if you want a single day. Expects: 'YYYY-M-D'
+    --from: string@_datetime_string__completion, # Fortnox 'fromdate' in a readable datetime string, see 'into datetime --list-human'
+
+    --from-final-pay-date: string,
+    --to-final-pay-date: string,
 
     --for-year (-Y): int, # Specify from/to date range by year, expects integer above 1970
     --for-quarter (-Q): int, # Specify from/to date range by quarter, expects integer [1-4]
     --for-month (-M): int, # Specify from/to date range by month, expects integer [1-12]
     --for-day (-D): int, # Specify from/to date range by day, expects integer [1-32]
 
-    --filter: string@_fortnox_invoices_filter__completion, # Filters for invoices:  'unbooked', 'cancelled', 'fullypaid', 'unpaid', 'unpaidoverdue'
     --no-cache, # Don't use cache for request.
     --dry-run, # Dry run, log the Fortnox API url, returns 'nothing'
 
@@ -72,10 +112,6 @@ export def main [
     --with-pagination (-P), # Return result includes Fortnox 'MetaInformation' for pagination: @TotalResource, @TotalPages, @CurrentPage
     --raw, # Returns least modified Fortnox response, --raw is mutually exclusive with --brief and --obfuscate --with-pagination ( will be used as 'true')
 
-    --limit (-l): int = 100, # Limit how many resources to fetch, expects integer [1-100]
-    --page (-p): range = 1..1, # If range is higher than 1..1, limit must be set to 100
-    --sort-by (-s): string = 'documentnumber', # Set 'sortby' param for Fortnox request
-    --sort-order (-s): string = 'descending', # Set 'sortorder' param for Fortnox Request, expects 'ascending' or 'descending'
 ] -> record {
     let $data = (parse_ids_and_body_from_input "invoices" $in --id $invoice_number --action $action --body $body)
 
