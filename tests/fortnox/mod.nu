@@ -1,1 +1,1 @@
-export use ./create_fortnox_resource_url.nu
+export use ./fortnox_resource_url_test.nu

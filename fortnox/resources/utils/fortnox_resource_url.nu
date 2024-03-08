@@ -1,13 +1,13 @@
-use ../../utils/url_encode_params.nu
-use ../../utils/compact_record.nu
+use ../../../utils/url_encode_params.nu
+use ../../../utils/compact_record.nu
 
 export def main [
     resources: string,
     params: record = {},
     --page (-p): int,
     --id (-i): int,
-    --additional-path (-a): string
-    --action (-A): string
+    --additional-path (-a): string = ""
+    --action (-A): string = ""
     ] -> string {
     ({
         scheme: 'https'

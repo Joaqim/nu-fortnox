@@ -35,9 +35,9 @@ export-env {
                 mkdir $env._FORTNOX_CACHE_DIR
             } else {
                 # Cleanup existing cache
-                (ls $env._FORTNOX_CACHE_DIR 
-                    | where { $in.modified - $env._FORTNOX_CACHE_VALID_DURATION >= (date now) } 
-                    | each { rm $in.name } 
+                (ls $env._FORTNOX_CACHE_DIR
+                    | where { $in.modified + $env._FORTNOX_CACHE_VALID_DURATION <= (date now) }
+                    | each { rm $in.name }
                 )
             }
         } else {

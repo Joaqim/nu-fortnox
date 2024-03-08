@@ -1,8 +1,28 @@
+#{
+    #for_year: $for_year
+    #for_quarter: $for_quarter
+    #for_month: $for_month
+    #for_day: $for_day
+    #date: $date
+    #from: $from
+    #from_date: $from_date
+    #to_date: $to_date
+#}
+
 export def main [
-    --for-year: int 
+    params: record<
+        for_year: int
+        for_quarter: int
+        for_month: int
+        for_day: int
+        date: string
+        from: string
+        from_date: string
+        to_date: string > = {}
+    --for-year: int
     --for-quarter: int
     --for-month: int
-    --for-day: int 
+    --for-day: int
     --date: string
     --from: string
     --from-date: string
@@ -11,6 +31,16 @@ export def main [
     --utc-offset = 1 # UTC+1 local Europe/Stockholm time
     --to-date-precision = 1ns
 ] -> record<from: datetime, to: datetime> {
+
+    def _fallback_date [$date_format: string] any -> int {
+        ($in
+            | default (
+                date now
+                    | format date $date_format
+            )
+        )
+    }
+
     if ([$for_year $for_quarter $for_month $for_day] | all {is-empty}) {
         if ([$from_date $from $date] | all { is-empty }) {
             return {
@@ -21,22 +51,13 @@ export def main [
         return {
             from: ($from_date  | default $from | default $date | into datetime | format date "%Y-%m-%d")
             to: ($to_date
-                    | default $date
-                    | default (
-                        date now | format date "%Y-%m-%d"
-                    )
+                    | default ($date | _fallback_date '%Y-%m-%d')
                 )
         }
     }
 
-    let $year = (
-        if ($for_year | is-empty) {
-             date now | format date "%Y" 
-        } else { 
-            $for_year 
-        } | into int
-    )
-     
+    let $year = ($for_year | default ($date | _fallback_date '%Y' | into int))
+
     if not ($for_quarter | is-empty) {
         if not ($for_quarter in 1..4) {
             error make {
@@ -77,19 +98,7 @@ export def main [
         }
     }
 
-
-
-    let $month = (
-        if ($for_month | is-empty) {
-            (if ($for_year | is-empty) {
-                date now | format date "%m" 
-            } else { # default to january if "$params.year" is provided
-                1
-            })
-        } else { 
-            $for_month 
-        } | into int
-    )
+    let $month = ($for_month | _fallback_date '%m' | into int)
 
 
     if not ($for_day | is-empty) {
@@ -121,7 +130,7 @@ export def main [
 
         return {
             from: ($"($year)-($month)-01($date_affix)" | into datetime --offset $utc_offset)
-            to: ($"($year)-($month + 1)-01($date_affix)" - ($to_date_precision | into duration) )
+            to: (($"($year)-($month + 1)-01($date_affix)" | into datetime --offset $utc_offset) - ($to_date_precision | into duration) )
         }
     }
 
@@ -140,10 +149,10 @@ export def main [
         # Date range, whole year
         let $from = ( $"($for_year)-01-01($date_affix)" | into datetime --offset $utc_offset)
         let $to = (($"($for_year + 1)-01-01($date_affix)" | into datetime --offset $utc_offset) - ($to_date_precision | into duration))
-        
-        return { 
-            from: $from      
-            to: $to 
+
+        return {
+            from: $from
+            to: $to
         }
     }
     return { from: null, to: null}

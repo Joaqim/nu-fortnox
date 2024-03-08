@@ -1,5 +1,11 @@
-use ../../utils/compact_record.nu
+use ../../../utils/compact_record.nu
+use ./fortnox_payload_keys.nu
 
+
+#  NOTE: actions with values: 'none', 'update' & 'create' are only used internally,
+# we POST, PUT or GET @ api/{resource}/{id}/<action> without actually appending them
+# to our url for Fortnox requests, 'update' and 'create' expects a 'body' input,
+# either as --body or from input.
 export def main [
     resources: string
     method: string
@@ -8,12 +14,16 @@ export def main [
     --ids: list<int>
     --body: any
     ] -> string {
-    if not ($resources == 'invoices') {
-        error make {
-            msg: $"Invalid resource for action"
-            label: {
-                text: $"Resource '($resources)' does not have actions"
-                span: (metadata $action).span
+
+    match $resources {
+        'invoices' => {}
+        _ => {
+            error make {
+                msg: $"Invalid resource for action"
+                label: {
+                    text: $"Resource '($resources)' does not have any actions"
+                    span: (metadata $action).span
+                }
             }
         }
     }
@@ -21,10 +31,10 @@ export def main [
     let $method = (match ($method | str downcase) {
         'put' if $action =~ "^(update|bookkeep|cancel|credit|externalprint|warehouseready)$" => {'PUT'}
         'post' if $action =~ "^(create)$" => {'POST'}
-        'get' if $action =~ "^(print|email|printreminder|preview|eprint|einvoice|none|)$" => {'GET'}
+        'get' if $action =~ "^(print|email|printreminder|preview|eprint|einvoice|)$" => {'GET'}
         _ => {
             error make {
-                msg: $"Unexpected action for method: ($method)"
+                msg: $"Unexpected action while using method: ($method)"
                 label: {
                     text: $"Missing or invalid action: ($action)"
                     span: (metadata $action).span
@@ -33,12 +43,11 @@ export def main [
         }
     })
 
-    # 'none', 'update' & 'create' are used internally
-    # we POST, PUT or GET @ api/{resource}/{id}/<action> without actually appending them to to our Fortnox API url request
-
     if ($action =~ '^(none|)$') {
         return ''
     }
+
+    let $payload_keys = (fortnox_payload_keys $resources)
 
     if ($action =~ '^(update|create)') {
         if ($body | is-empty) {
@@ -50,11 +59,11 @@ export def main [
                 }
             }
         }
-        if ($body.Invoice? | is-empty) {
+        if ($body | get $payload_keys.singular --ignore-errors | is-empty) {
             error make {
-                msg: $"Invalid Invoice payload for action ($action)"
+                msg: $"Invalid payload for action ($action)"
                 label: {
-                    text: $"Expected --body to have payload: '{ Invoice: {...} }'  - ($method) request @ /($resources)/"
+                    text: $"Expected --body to have payload: '{ ($payload_keys.singular): {...} }'  - ($method) request @ /($resources)/"
                     span: (metadata $body).span
                 }
             }

@@ -1,6 +1,6 @@
 
-export def main [page: range params: record] -> {
-    if $page != 1..1 and $params.limit != 100 {
+export def main [pages: range params: record] -> {
+    if $pages != 1..1 and $params.limit != 100 {
         error make {
             msg: "Unexpected param value"
             label: {
@@ -9,7 +9,8 @@ export def main [page: range params: record] -> {
             }
         }
     }
-    if $page == 1..1 and $params.limit > 100 {
+
+    if $pages == 1..1 and $params.limit > 100 {
         error make {
             msg: "Unexpected param value"
             label: {
@@ -18,12 +19,14 @@ export def main [page: range params: record] -> {
             }
         }
     }
-    if (10 in $page) and ( $params | reject limit sortorder sortby | compact_record --remove-empty | is-empty ) {
+
+    const $non_filtering_params = [limit sortorder sortby]
+    if (30 in $pages) and ( $params | reject  $non_filtering_params | compact_record --remove-empty | is-empty ) {
         error make {
             msg: "Unexpected param value"
             label: {
                 text: "When fetching a large amount of pages (--page = 1..) make sure to use filtering to reduce amount of calls to Fortnox API."
-                span: (metadata $page).span
+                span: (metadata $pages).span
             }
         }
     }

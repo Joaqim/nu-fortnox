@@ -16,7 +16,14 @@ export def load_from_file [key: string] -> {
     (open $cache_file | from json)
 }
 
-export def save_to_file [key: string, value: any] {
-    let $cache_file = ($env._FORTNOX_CACHE_DIR | path join (_create_hash_file_name $key ))
+# Saves value to file with cache key. Returns the given value.
+export def save_to_file [cache_key: string, value: any] {
+    let $cache_file = ($env._FORTNOX_CACHE_DIR | path join (_create_hash_file_name $cache_key ))
     ($value | to json -r | save -f $cache_file)
+    return $value
 }
+
+export def function_call [cache_key: string, function: closure] {
+    (load_from_file $cache_key | default (do $function { save_to_file $cache_key $in }))
+}
+

@@ -26,12 +26,30 @@ export def validate_db_connection_string [] -> bool {
     ($env.DB_CONNECTION_STRING =~ ^mongodb://)
 }
 
+def _mongosh [eval: string --current-retry-count=0] {
+    try {
+        return (mongosh $env.DB_CONNECTION_STRING --eval $eval --quiet)
+    } catch {|err|
+        # Prevents infinite loop, exits after reaching max retries:
+        if $current_retry_count > 5 {
+            error make {
+                msg: $"Request failed after ($current_retry_count) tries - ($err | to nuon)",
+                label: {
+                    text: $"mongosh failed with eval: '$eval'",
+                    span: (metadata $eval).span
+                }
+            }
+        }
+        return (_mongosh $eval --current-retry-count=($current_retry_count + 1))
+    }
+}
+
 export def has_collection [collection_name: string] -> bool {
-    (mongosh $env.DB_CONNECTION_STRING --eval 'db.getCollectionNames().indexOf("credentials") != -1' --quiet | into bool)
+    (_mongosh 'db.getCollectionNames().indexOf("credentials") != -1'| into bool)
 }
 
 export def update_one [collection_name: string, query: string, entry: string] {
-    (mongosh $env.DB_CONNECTION_STRING --eval $"db.($collection_name).updateOne\(($query), { \$set: ($entry) })" --quiet | null)
+    (_mongosh $"db.($collection_name).updateOne\(($query), { \$set: ($entry) })"| null)
 }
 
 export def find_one [
@@ -43,14 +61,14 @@ export def find_one [
         ] {
             def parse_mongodb_object [object_string: string] -> string {
                 let match = (
-                    $object_string 
+                    $object_string
                     | parse --regex "\\s*_?(.*):.*\('(.*)'\),?"
                 ).0
                 ($"($match.capture0): ($match.capture1),")
             }
             $document_string
                 | lines --skip-empty
-                | each { 
+                | each {
                     if $in =~ 'ObjectId|ISODate' {
                         return (parse_mongodb_object $in)
                     } else { $in }
@@ -60,6 +78,6 @@ export def find_one [
     }
 
     (parse_mongodb_document (
-        mongosh $env.DB_CONNECTION_STRING --eval $"\"db.($collection_name).findOne\(($query)\)\"" --quiet)
+        _mongosh $"\"db.($collection_name).findOne\(($query)\)\"")
     )
 }

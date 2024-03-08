@@ -1,123 +1,110 @@
-use ../../utils/ratelimit_sleep.nu
 use std log
 
-use ./obfuscate_fortnox_resource.nu
-use ./create_fortnox_resource_url.nu
-use ./fortnox_request.nu
+use ./utils/obfuscate_fortnox_resource.nu
+use ./utils/fortnox_resource_url.nu
+use ./utils/verify_pagination_params.nu
+use ./utils/fortnox_payload_keys.nu
 use ../../utils/url_encode_params.nu
 use ../../utils/compact_record.nu
 use ../../utils/cache/
-use ../../utils/verify_page_range_and_params.nu
+use ../../utils/progress_bar.nu
 
-# 'invoices' -> [Invoice, Invoices], 'vouchers' -> [Voucher, Vouchers], etc...
-def _get_fortnox_payload_key [resources: string] record<singular: string, plural: string> {
-    (match ($resources) {
-        "invoices" => {{singular: 'Invoice', plural: 'Invoices'}}
-        _ => {
-            error make {
-                msg: "Unknown fortnox resource"
-                label: {
-                    text: $"Tried to find Fortnox payload key for ($resources)"
-                    span: (metadata $resources).span
-                }
-            }
-        }
-    })
-}
+
+use ./fortnox_request.nu
 
 export def main [
         resources: string,
+        opts: record<
+            pages: range
+            additional_path: string
+            brief: bool
+            no_cache: bool
+            obfuscate: bool
+            with_pagination: bool
+            dry_run: bool
+            raw: bool
+        >
         params?: record = {},
-
-        --method: string = "get",
-        --action: string = "",
-        --body: any = ""
-
-        --page: range = 1..1,
-        --id: int,
-        --additional-path (-a): string = "",
-        --brief,
-        --no-cache,
-        --obfuscate,
-        --with-pagination,
-        --dry-run,
-        --raw, # TODO: --raw should be probably be mutually exclusive with --brief, --obfuscate and --no-pagination
     ] {
 
-    if ($dry_run) {
-        log info ($"Dry-run: ($method) @ " + (create_fortnox_resource_url $"($resources)" $params --action $action --page=(-100) -a $additional_path -i $id) | str replace "%2D100" $"($page.0)..($page.99? | default ($page| to nuon | split row ".." | last ))")
-        return {Invoice: {}}
+    if ($opts.dry_run) {
+        let $url = (
+            (fortnox_resource_url $"($resources)" $params
+                --page=(123)
+                -a $opts.additional_path
+            )
+            # Here we replace placeholder page param '123' with values from our range: <min>..<max>
+            | str replace "123" (
+                $"($opts.pages | to nuon)"
+            )
+        )
+        log info ($"Dry-run: 'GET' @ ($url)")
+        let $resource_keys = (fortnox_payload_keys $resources)
+        return [{ $resource_keys.plural: [{'@url': $url}], MetaInformation: {'@TotalPages': 1, '@CurrentPage': 1, '@TotalResources': 1} }]
     }
 
-    if ($method != 'get') {
-        let $url = (create_fortnox_resource_url $"($resources)" $params --action $action -a $additional_path -i $id)
-        return (fortnox_request $method $url --body $body)
+
+    (verify_pagination_params $opts.pages $params)
+
+    def _fetch_page [$page_nr: int]: int -> any {
+        let $current_page_url: string = (fortnox_resource_url $resources --page=($page_nr) $params -a $opts.additional_path)
+        (fortnox_request
+            'get'
+            $current_page_url
+            --no-cache=($opts.no_cache)
+        )
     }
 
-    (verify_page_range_and_params $page $params)
+    let $first_page = ($opts.pages | math min)
+    let $last_page = ($opts.pages | math max)
 
-    mut $result = {}
+    mut $result: list<any> = (_fetch_page $first_page)
 
-    let $cache_key = $"($resources)_(url_encode_params {...$params, page: ( $page | to nuon ), add: $additional_path, id: $id})"
+    # Get previous pagination from last result
+    if ($result | describe) !~ ^list {
+        $result = [$result]
+    }
 
-    if $env._FORTNOX_USE_CACHE and (not $no_cache) {
-        let $cached_result = (cache load_from_file $cache_key)
-        if $cached_result != null {
-            $result = $cached_result
+    let $current_page = (($result | last).MetaInformation?.@CurrentPage | default $first_page | into int)
+    let $total_pages = (($result | last).MetaInformation?.@TotalPages | default $last_page | into int)
+
+    if ($current_page < $total_pages) {
+
+        const $FORTNOX_PAGINATION_LIMIT = 500;
+        let $pages_indices = (
+            ($current_page)..(
+                [
+                    $total_pages
+                    $last_page
+                    $FORTNOX_PAGINATION_LIMIT
+                ] | math min
+            )
+        )
+
+        $result = (
+            $result | append
+                (progress_bar $pages_indices --start-offset=($current_page) {|$current_page_nr|
+                    (_fetch_page $current_page_nr)
+                }
+            )
+        )
+    }
+
+    if ($env._FORTNOX_USE_CACHE) and not ($opts.no_cache) {
+        let $cache_key: string = (fortnox_resource_url $resources --page=($first_page) $params -a $opts.additional_path)
+        cache save_to_file $cache_key $result
+    }
+
+
+    if ($result | describe) =~ ^list {
+        if ($result | length) == 1 {
+            $result = $result.0
         }
     }
 
-    if ($result | is-empty) {
-        mut $resource_list = []
-        mut $meta_information = {}
-        for $current_page in $page {
-            let $url: string = (create_fortnox_resource_url $"($resources)" $params --action $action --page $current_page -a $additional_path -i $id)
-
-            let $fortnox_payload: any = (fortnox_request 'get' $url)
-
-            # If there is no MetaInformation, assume single resource with no pagination needed.
-            if ($fortnox_payload.MetaInformation? | is-empty) {
-                $result = $fortnox_payload
-                break
-            }
-
-            $resource_list = ($resource_list | append ($fortnox_payload | reject MetaInformation | flatten --all ))
-
-            if $current_page >= ($fortnox_payload.MetaInformation.@TotalPages | into int) {
-                $meta_information = $fortnox_payload.MetaInformation
-                break;
-            } 
-            if not (($current_page + 2) in $page) {
-                $meta_information = $fortnox_payload.MetaInformation
-            }
-        }
-
-        # NOTE: We implicitly expect $resource_list to be non-empty
-        if ($result | is-empty) {
-            let $resource_key : record<singular: string, plural: string> = (_get_fortnox_payload_key $resources)
-            if ($with_pagination) {
-                $result = { $resource_key.plural: $resource_list, MetaInformation: $meta_information }
-            } else {
-                $result = { $resource_key.plural: $resource_list }
-            }
-        }
-
-        # NOTE: We write to cache, even when $no_cache is set
-        if $env._FORTNOX_USE_CACHE and $method == 'get' {
-            cache save_to_file $cache_key $result
-        }
+    if not $opts.raw and not ($opts.with_pagination) {
+        return ($result | reject MetaInformation? --ignore-errors | flatten -a)
     }
 
-    if ($raw) {
-        return $result
-    }
-
-    def make_brief [] -> record {
-        $in | compact_record --remove-empty | reject --ignore-errors @url @urlTaxReductionList
-    }
-
-    if ($brief == true) {
-        return $result | reject MetaInformation? | flatten | each { make_brief } | flatten
-    }
     return $result
 }
