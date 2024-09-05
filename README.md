@@ -2,6 +2,11 @@
 
 WIP, currently primarily focused on supporting Fortnox API for resource: 'invoices'
 
+![demo-1](./docs/demo-1.gif)
+
+![demo-2](./docs/demo-2.gif)
+
+
 ```nushell
 fortnox invoices --for-quarter 1 --for-year 2024 --page 1..
     | to csv
