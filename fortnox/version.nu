@@ -6,7 +6,7 @@
 # fortnox version
 # ```
 export def "fortnox version" []: nothing -> record<version: string, branch: string, commit: record<message: string, hash: string, date: datetime>> {
-    let $install_dir = ($env.CURRENT_FILE? | path dirname | path join "nu-fortnox")
+    mut $install_dir = ($env.CURRENT_FILE? | path dirname | path join "nu-fortnox")
 
     if not ($env.NUPM_HOME? | is-empty) {
         let $modules_dir = $env.NUPM_HOME | path join "modules"

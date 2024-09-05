@@ -21,7 +21,7 @@ export def main [pages: range params: record] -> {
     }
 
     const $non_filtering_params = [limit sortorder sortby]
-    if (30 in $pages) and ( $params | reject  $non_filtering_params | compact_record --remove-empty | is-empty ) {
+    if (30 in $pages) and ( $params | reject  ...$non_filtering_params | compact_record --remove-empty | is-empty ) {
         error make {
             msg: "Unexpected param value"
             label: {

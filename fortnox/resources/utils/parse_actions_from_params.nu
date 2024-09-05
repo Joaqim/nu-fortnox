@@ -31,7 +31,7 @@ export def main [
     let $method = (match ($method | str downcase) {
         'put' if $action =~ "^(update|bookkeep|cancel|credit|externalprint|warehouseready)$" => {'PUT'}
         'post' if $action =~ "^(create)$" => {'POST'}
-        'get' if $action =~ "^(print|email|printreminder|preview|eprint|einvoice|)$" => {'GET'}
+        'get' if $action =~ "^(print|email|printreminder|preview|eprint|einvoice|invoice)$" => {'GET'}
         _ => {
             error make {
                 msg: $"Unexpected action while using method: ($method)"
@@ -43,7 +43,7 @@ export def main [
         }
     })
 
-    if ($action =~ '^(none|)$') {
+    if ($action =~ '^(none|invoice|)$') {
         return ''
     }
 

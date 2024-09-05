@@ -61,7 +61,7 @@ export def main [
     mut $result: list<any> = (_fetch_page $first_page)
 
     # Get previous pagination from last result
-    if ($result | describe) !~ ^list {
+    if ($result | describe) =~ ^record {
         $result = [$result]
     }
 

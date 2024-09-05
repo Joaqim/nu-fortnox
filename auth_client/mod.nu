@@ -8,7 +8,7 @@ export def fetch_remote_credentials [
 export def update_remote_credentials [
         body: record<access_token: string, refresh_token: string, expires_in: int>
     ] -> string {
-    (db_client update_credentials 
+    (db_client update_credentials
         --access-token $body.access_token
         --refresh-token $body.refresh_token
         --expires-in $body.expires_in
@@ -23,8 +23,8 @@ export def refresh_access_token [
     ] -> string {
 
     let body = {
-         grant_type: "refresh_token",
-         refresh_token: $refresh_token
+        grant_type: "refresh_token",
+        refresh_token: $refresh_token
     }
 
     let $url: string = $env._FORTNOX_TOKEN_API_URL
@@ -33,11 +33,11 @@ export def refresh_access_token [
         http post $url --content-type "application/x-www-form-urlencoded" $body -u $client_identity -p $client_secret -e -f
     )
 
-
     (match $response.status {
         200 => ( update_remote_credentials $response.body )
         400 => {
             let $token_error_body = ($response.body | from json)
+            # TODO: Handle: { token_error_body.error == 'invalid_grant' }
             error make {
                 msg: $"($response.status) - ($token_error_body.error)",
                 label: {
@@ -63,12 +63,10 @@ export def refresh_access_token [
     )
 }
 
-
-
 export def has_valid_token [
         credentials: record<accessToken: string, expiresAt: string>
     ] -> bool {
-    (($credentials.accessToken? | is-empty) or (date now) < ($credentials.expiresAt | into datetime))
+    ((not ($credentials.accessToken? | is-empty)) and (date now) < ($credentials.expiresAt | into datetime))
 }
 
 export def get_access_token [] -> string {

@@ -2,6 +2,8 @@ use ../../auth_client/ *
 use ../../utils/ratelimit_sleep.nu
 use ../../utils/cache/
 
+use std log
+
 # Moved from main to allow recursive retries when 401 is returned from Fortnox API
 def _request [
     method: string,
@@ -29,12 +31,12 @@ def _request [
                 }
             }
         } | match $in.status {
-            401 => { # 'Too many requests'
+            429 => { # 'Too many requests'
 
                 # Prevents infinite loop, exits after reaching max retries:
                 if $current_retry_count > ($env._FORTNOX_MAX_RETRIES_COUNT? | default 5) {
                     error make {
-                        msg: $"Request failed after ($current_retry_count) tries - ($in.body.error)",
+                        msg: $"Request failed after ($current_retry_count) tries",
                         label: {
                             text: $in.body.error_description,
                             span: (metadata $url).span
@@ -53,9 +55,14 @@ def _request [
                 $in.body
             }
             400 => {
-                let $body = $in.body
+                let $fortnox_body = $in.body
                 let $fortnox_message = $body.ErrorInformation?.message?
+
+                # We return empty result when we presumably reach an expected page limit.
+                # NOTE: This should only happen if the first and only page we request is invalid
+                # TODO: This should probably be a throwable error,
                 if ($fortnox_message == "Angiven sida hittades ej (24).") {
+                    log error $fortnox_message
                     return null
                 }
                 error make {

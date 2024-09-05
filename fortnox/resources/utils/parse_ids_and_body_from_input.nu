@@ -15,7 +15,7 @@ export def main [
 
     match $resources {
         'invoices' => {
-            if (($input | describe) =~ 'list<int>|int') {
+            if (($input | describe) =~ 'list<int>|int|list<string>') {
                 if not ($id | is-empty) {
                     error make {
                         msg: "Unexpected param"
@@ -28,7 +28,7 @@ export def main [
                 if (($input | length) == 1) {
                     $result.id = $input.0
                 } else {
-                    $result.ids = $input
+                    $result.ids = ($input | into int)
                 }
             } else if ($action =~ '(update|create)' ) {
                 # Assume pipeline is used as body input instead of '--body'
